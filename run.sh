@@ -1,10 +1,10 @@
 #!/bin/bash
-# .\main.exe --project-dir .  --ai-backend=openrouter --ai-model=google/gemma-7b-it:free  --ai-api-key=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
+# .\main.exe --project-dir .  --ai-backend=openrouter --ai-model=google/gemma-7b-it:free  --ai-api-key=<api-token>
 # Parse flags
 PROJECT_DIR="."
 AI_BACKEND="ollama"
 AI_MODEL="gemma:2b"
-AI_API_KEY="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"
+AI_API_KEY=""
 AI_ENABLED="true"
 
 while [[ $# -gt 0 ]]; do

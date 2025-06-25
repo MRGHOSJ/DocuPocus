@@ -48,7 +48,7 @@ func NewClient(backend ai.Backend, cfg ai.BackendConfig) *Client {
 		cfg.MaxRetries = 3
 	}
 	if cfg.BatchSize <= 0 {
-		cfg.BatchSize = 4
+		cfg.BatchSize = 3
 	}
 	if cfg.TokenBudget <= 0 {
 		cfg.TokenBudget = 7000
@@ -76,7 +76,7 @@ func (c *Client) EnhanceDocumentationBatch(ctx context.Context, inputs, language
 
 	// Apply defaults (defensive programming)
 	if c.config.BatchSize <= 0 {
-		c.config.BatchSize = 4
+		c.config.BatchSize = 3
 	}
 	if c.config.TokenBudget <= 0 {
 		c.config.TokenBudget = 7000

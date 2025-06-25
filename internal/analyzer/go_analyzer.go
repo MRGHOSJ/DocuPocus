@@ -62,7 +62,6 @@ func exists(path string) bool {
 	return err == nil
 }
 
-// AnalyzeFile analyzes a single Go file
 func (g *GoAnalyzer) AnalyzeFile(path string) (*AnalyzedFile, error) {
 	fset := token.NewFileSet()
 
@@ -74,6 +73,12 @@ func (g *GoAnalyzer) AnalyzeFile(path string) (*AnalyzedFile, error) {
 	pkg := Package{
 		Name: filepath.Base(filepath.Dir(path)),
 		Path: path,
+	}
+
+	// Collect imports
+	for _, imp := range node.Imports {
+		importPath := strings.Trim(imp.Path.Value, `"`)
+		pkg.Imports = append(pkg.Imports, importPath)
 	}
 
 	// First pass: collect all function names
@@ -90,19 +95,45 @@ func (g *GoAnalyzer) AnalyzeFile(path string) (*AnalyzedFile, error) {
 		}
 	}
 
-	// Second pass: analyze functions with call tracking
+	// Second pass: analyze declarations
 	for _, decl := range node.Decls {
 		switch d := decl.(type) {
 		case *ast.GenDecl:
 			if d.Tok == token.TYPE {
 				for _, spec := range d.Specs {
 					typeSpec := spec.(*ast.TypeSpec)
-					if _, ok := typeSpec.Type.(*ast.StructType); ok {
+					if structType, ok := typeSpec.Type.(*ast.StructType); ok {
 						s := Struct{
-							Name: typeSpec.Name.Name,
-							Doc:  ai.Documentation{Summary: utils.DocToString(d.Doc)},
+							Name:    typeSpec.Name.Name,
+							Doc:     ai.Documentation{Summary: utils.DocToString(d.Doc)},
+							Fields:  []Field{},
+							Methods: []Function{},
 						}
-						// ... existing struct field processing ...
+
+						// Process struct fields
+						if structType.Fields != nil {
+							for _, field := range structType.Fields.List {
+								fieldType := utils.ExprToString(field.Type)
+								if len(field.Names) == 0 {
+									// Embedded field
+									s.Fields = append(s.Fields, Field{
+										Name: fieldType,
+										Type: fieldType,
+										Doc:  ai.Documentation{Summary: utils.DocToString(field.Doc)},
+									})
+								} else {
+									// Regular fields
+									for _, name := range field.Names {
+										s.Fields = append(s.Fields, Field{
+											Name: name.Name,
+											Type: fieldType,
+											Tag:  utils.FieldTagToString(field.Tag),
+											Doc:  ai.Documentation{Summary: utils.DocToString(field.Doc)},
+										})
+									}
+								}
+							}
+						}
 						pkg.Structs = append(pkg.Structs, s)
 					}
 				}
@@ -138,6 +169,17 @@ func (g *GoAnalyzer) AnalyzeFile(path string) (*AnalyzedFile, error) {
 			})
 
 			pkg.Funcs = append(pkg.Funcs, fn)
+
+			// If this is a method, add it to the appropriate struct
+			if d.Recv != nil && len(d.Recv.List) > 0 {
+				recvType := utils.ExprToString(d.Recv.List[0].Type)
+				for i, s := range pkg.Structs {
+					if s.Name == recvType {
+						pkg.Structs[i].Methods = append(pkg.Structs[i].Methods, fn)
+						break
+					}
+				}
+			}
 		}
 	}
 

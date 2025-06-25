@@ -70,3 +70,12 @@ func HasFilesWithExtension(dir, ext string) bool {
 	})
 	return found
 }
+
+func FieldTagToString(tag *ast.BasicLit) string {
+	if tag == nil {
+		return ""
+	}
+	// Remove backticks and quotes
+	tagValue := strings.Trim(tag.Value, "`\"")
+	return tagValue
+}

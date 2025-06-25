@@ -54,20 +54,102 @@ func (p *PythonAnalyzer) Analyze(projectDir string) (*AnalyzerResult, error) {
 }
 
 // -- Helpers --
-
 func extractPythonClasses(src string) []Struct {
 	classRegex := regexp.MustCompile(`(?m)^class\s+(\w+)\s*(\(.*\))?:\s*(?:#.*)?`)
 	docstringRegex := regexp.MustCompile(`(?m)(?:"""|''')(.*?)("""|''')`)
+	fieldRegex := regexp.MustCompile(`(?m)^\s+self\.(\w+)\s*=`)
+	methodRegex := regexp.MustCompile(`(?m)^\s+def\s+(\w+)\s*\(self[^)]*\):`)
 
 	var structs []Struct
 	for _, match := range classRegex.FindAllStringSubmatch(src, -1) {
+		className := match[1]
+		doc := findDocstringAfter(match[0], src, docstringRegex)
+
 		s := Struct{
-			Name: match[1],
-			Doc:  ai.Documentation{Summary: findDocstringAfter(match[0], src, docstringRegex)},
+			Name:    className,
+			Doc:     ai.Documentation{Summary: doc},
+			Fields:  []Field{},
+			Methods: []Function{},
 		}
+
+		// Find the class body
+		classBody := extractPythonClassBody(src, match[0])
+
+		// Extract fields
+		for _, fieldMatch := range fieldRegex.FindAllStringSubmatch(classBody, -1) {
+			fieldName := fieldMatch[1]
+			s.Fields = append(s.Fields, Field{
+				Name: fieldName,
+				Type: "unknown",
+			})
+		}
+
+		// Extract methods
+		for _, methodMatch := range methodRegex.FindAllStringSubmatch(classBody, -1) {
+			methodName := methodMatch[1]
+			methodDoc := findDocstringAfter(methodMatch[0], classBody, docstringRegex)
+
+			s.Methods = append(s.Methods, Function{
+				Name: methodName,
+				Doc:  ai.Documentation{Summary: methodDoc},
+			})
+		}
+
 		structs = append(structs, s)
 	}
 	return structs
+}
+
+func extractPythonClassBody(src, classDecl string) string {
+	// Find the class declaration
+	declIndex := strings.Index(src, classDecl)
+	if declIndex == -1 {
+		return ""
+	}
+
+	// Find the start of the class body (after the colon)
+	bodyStart := declIndex + len(classDecl)
+	for bodyStart < len(src) && (src[bodyStart] == ' ' || src[bodyStart] == '\n') {
+		bodyStart++
+	}
+
+	// Find the indentation level of the class
+	indentLevel := 0
+	for i := declIndex - 1; i >= 0; i-- {
+		if src[i] == '\n' {
+			break
+		}
+		indentLevel++
+	}
+
+	// Extract the body by tracking indentation
+	var body strings.Builder
+	currentIndent := 0
+	inBody := false
+
+	for i := bodyStart; i < len(src); i++ {
+		if src[i] == '\n' {
+			currentIndent = 0
+			for i+1 < len(src) && src[i+1] == ' ' {
+				currentIndent++
+				i++
+			}
+			if !inBody {
+				if currentIndent > indentLevel {
+					inBody = true
+				} else {
+					break
+				}
+			} else if currentIndent <= indentLevel {
+				break
+			}
+		}
+		if inBody {
+			body.WriteByte(src[i])
+		}
+	}
+
+	return body.String()
 }
 
 func extractPythonFunctions(src string) []Function {

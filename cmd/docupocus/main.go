@@ -120,22 +120,22 @@ func generateDocs(projectDir, template, outputFile string, aiClient *ai.Client, 
 
 	// Generate documentation
 	cfg := generator.GeneratorConfig{
-		AIClient: aiClient,
+		AIClient:  aiClient,
+		OutputDir: "docs",
+		Project: struct {
+			Name        string
+			Description string
+			RepoURL     string
+		}{
+			Name:        "My Awesome Project",
+			Description: "A next-generation solution for all your needs",
+			RepoURL:     "https://github.com/username/myproject",
+		},
 	}
 
-	doc, err := generator.GenerateMarkdown(result, template, cfg)
-	if err != nil {
+	if err = generator.GeneratePackageDocs(result, template, cfg); err != nil {
 		return fmt.Errorf("document generation failed: %w", err)
 	}
 
-	// Write output file
-	outputPath := filepath.Join(projectDir, outputFile)
-	if err := os.WriteFile(outputPath, []byte(doc), 0644); err != nil {
-		return fmt.Errorf("failed to write documentation file: %w", err)
-	}
-
-	if verbose {
-		fmt.Printf("📄 Documentation generated at: %s\n", outputPath)
-	}
 	return nil
 }

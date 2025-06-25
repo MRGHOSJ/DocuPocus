@@ -138,18 +138,85 @@ func extractJSFunctionBody(src, funcDecl string) string {
 func extractJSClasses(src string) []Struct {
 	classRegex := regexp.MustCompile(`(?m)^class\s+(\w+)`)
 	jsdocRegex := regexp.MustCompile(`(?s)/\*\*(.*?)\*/`)
+	fieldRegex := regexp.MustCompile(`(?m)^\s*(?:static\s+)?(\w+)\s*(?:=\s*[^;]+)?;`)
+	methodRegex := regexp.MustCompile(`(?m)^\s*(?:static\s+)?(\w+)\s*\(([^)]*)\)\s*{`)
 
 	var structs []Struct
 	for _, match := range classRegex.FindAllStringSubmatch(src, -1) {
-		name := match[1]
+		className := match[1]
 		doc := findDocBefore(match[0], src, jsdocRegex)
 
-		structs = append(structs, Struct{
-			Name: name,
-			Doc:  ai.Documentation{Summary: doc},
-		})
+		s := Struct{
+			Name:    className,
+			Doc:     ai.Documentation{Summary: doc},
+			Fields:  []Field{},
+			Methods: []Function{},
+		}
+
+		// Find the class body
+		classBody := extractJsClassBody(src, match[0])
+
+		// Extract fields
+		for _, fieldMatch := range fieldRegex.FindAllStringSubmatch(classBody, -1) {
+			fieldName := fieldMatch[1]
+			s.Fields = append(s.Fields, Field{
+				Name: fieldName,
+				Type: "unknown",
+			})
+		}
+
+		// Extract methods
+		for _, methodMatch := range methodRegex.FindAllStringSubmatch(classBody, -1) {
+			methodName := methodMatch[1]
+			rawParams := methodMatch[2]
+			params := parseParamList(methodName, rawParams)
+
+			methodDoc := findDocBefore(methodMatch[0], classBody, jsdocRegex)
+
+			s.Methods = append(s.Methods, Function{
+				Name:       methodName,
+				Parameters: params,
+				Doc:        ai.Documentation{Summary: methodDoc},
+			})
+		}
+
+		structs = append(structs, s)
 	}
 	return structs
+}
+
+func extractJsClassBody(src, classDecl string) string {
+	// Find the class declaration
+	declIndex := strings.Index(src, classDecl)
+	if declIndex == -1 {
+		return ""
+	}
+
+	// Find the start of the class body (after the class name)
+	bodyStart := declIndex + len(classDecl)
+	for bodyStart < len(src) && src[bodyStart] != '{' {
+		bodyStart++
+	}
+	if bodyStart >= len(src) {
+		return ""
+	}
+	bodyStart++ // Skip the '{'
+
+	// Extract the body by tracking braces
+	var body strings.Builder
+	braceLevel := 1
+	for i := bodyStart; i < len(src) && braceLevel > 0; i++ {
+		if src[i] == '{' {
+			braceLevel++
+		} else if src[i] == '}' {
+			braceLevel--
+		}
+		if braceLevel > 0 {
+			body.WriteByte(src[i])
+		}
+	}
+
+	return body.String()
 }
 
 func parseParamList(_ string, raw string) []Parameter {

@@ -1,0 +1,9 @@
+ai-cache/
+
+
+*.log
+*.tmp
+*.bak
+*.swp
+.idea/
+.vscode/

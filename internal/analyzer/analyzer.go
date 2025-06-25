@@ -24,6 +24,7 @@ type AnalyzedFile struct {
 type Package struct {
 	Name    string
 	Path    string
+	Imports []string
 	Structs []Struct
 	Funcs   []Function
 	Files   []string
