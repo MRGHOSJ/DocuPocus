@@ -1,8 +1,10 @@
 # 📦 Package: `utils`
 
-> 📍 `C:\Users\DELL\Documents\GitHub\DocuPocus\internal\utils\utils.go`
-
 [← Back to Overview](../README.md)
+
+## 📄 File: `utils.go`
+
+> 📍 `utils\utils.go`
 
 ## 📑 Contents
 

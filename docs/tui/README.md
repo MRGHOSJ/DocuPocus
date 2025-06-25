@@ -1,8 +1,10 @@
 # 📦 Package: `tui`
 
-> 📍 `C:\Users\DELL\Documents\GitHub\DocuPocus\internal\tui\wizard.go`
-
 [← Back to Overview](../README.md)
+
+## 📄 File: `wizard.go`
+
+> 📍 `tui\wizard.go`
 
 ## 📑 Contents
 

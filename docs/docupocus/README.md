@@ -1,8 +1,10 @@
 # 📦 Package: `docupocus`
 
-> 📍 `C:\Users\DELL\Documents\GitHub\DocuPocus\cmd\docupocus\main.go`
-
 [← Back to Overview](../README.md)
+
+## 📄 File: `main.go`
+
+> 📍 `docupocus\main.go`
 
 ## 📑 Contents
 

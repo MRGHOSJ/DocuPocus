@@ -215,8 +215,8 @@
 `C:\Users\DELL\Documents\GitHub\DocuPocus\internal\generator\generator.go`
 
 - 2 structs
-- 11 functions
-- 📊 15% documented
+- 12 functions
+- 📊 14% documented
 
 </td>
 <tr>

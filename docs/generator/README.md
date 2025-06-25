@@ -1,13 +1,15 @@
 # 📦 Package: `generator`
 
-> 📍 `C:\Users\DELL\Documents\GitHub\DocuPocus\internal\generator\generator.go`
-
 [← Back to Overview](../README.md)
+
+## 📄 File: `generator.go`
+
+> 📍 `generator\generator.go`
 
 ## 📑 Contents
 
 - [🧱 Structs (2)](#-structs)
-- [🔧 Functions (11)](#-functions)
+- [🔧 Functions (12)](#-functions)
 
 ## 🧱 Structs
 
@@ -171,7 +173,7 @@ err := generatePackageDoc(pkgData, "docs/pkg.md", docConfig)
 </details>
 
 <details>
-<summary><b><code>generateSidebar(result *analyzer.AnalyzerResult, cfg GeneratorConfig)</code></b></summary>
+<summary><b><code>getDisplayPath(fullPath string)</code></b></summary>
 
 **Summary:** Generates a sidebar from analysis results and configuration
 
@@ -193,6 +195,34 @@ err := generateSidebar(analysisResult, config)
 **Edge Cases:**
 - Nil analyzer result pointer
 - Invalid configuration options
+
+
+</details>
+
+<details>
+<summary><b><code>generateSidebar(result *analyzer.AnalyzerResult, cfg GeneratorConfig)</code></b></summary>
+
+**Summary:** Generates a sidebar from analysis results and configuration
+
+**Parameters:**
+- `result` (*analyzer.AnalyzerResult): Analysis results to populate sidebar
+- `cfg` (GeneratorConfig): Configuration for sidebar generation
+
+**Returns:** error if generation fails, nil otherwise
+
+**Complexity:**
+- Time: O(n) where n is the size of analysis results
+- Space: O(m) where m is the size of generated sidebar
+
+**Example:**
+```go
+err := generateSidebar(analysisResult, config) // generates sidebar HTML
+```
+
+**Edge Cases:**
+- Nil analyzer result input
+- Invalid generator configuration
+- Empty analysis results
 
 
 </details>

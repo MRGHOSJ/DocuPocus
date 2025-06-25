@@ -159,17 +159,33 @@ func generateProjectReadme(result *analyzer.AnalyzerResult, cfg GeneratorConfig)
 }
 
 func generatePackageDoc(pkg analyzer.Package, filePath string, cfg GeneratorConfig) error {
-	var b strings.Builder
 	pkgDir := filepath.Join(cfg.OutputDir, pkg.Name)
 
 	if err := os.MkdirAll(pkgDir, 0755); err != nil {
 		return fmt.Errorf("failed to create package directory: %w", err)
 	}
 
-	// Package header with breadcrumbs
-	b.WriteString(fmt.Sprintf("# 📦 Package: `%s`\n\n", pkg.Name))
-	b.WriteString(fmt.Sprintf("> 📍 `%s`\n\n", filePath))
-	b.WriteString("[← Back to Overview](../README.md)\n\n")
+	readmePath := filepath.Join(pkgDir, "README.md")
+
+	var existingContent []byte
+	if _, err := os.Stat(readmePath); err == nil {
+		existingContent, _ = os.ReadFile(readmePath)
+	}
+
+	var b strings.Builder
+
+	if len(existingContent) > 0 {
+		b.Write(existingContent)
+		b.WriteString("\n---\n\n")
+	} else {
+		// Package header with breadcrumbs
+		b.WriteString(fmt.Sprintf("# 📦 Package: `%s`\n\n", pkg.Name))
+		b.WriteString("[← Back to Overview](../README.md)\n\n")
+	}
+
+	// Add file-specific section
+	b.WriteString(fmt.Sprintf("## 📄 File: `%s`\n\n", filepath.Base(filePath)))
+	b.WriteString(fmt.Sprintf("> 📍 `%s`\n\n", getDisplayPath(filePath)))
 
 	// TOC for package
 	b.WriteString("## 📑 Contents\n\n")
@@ -204,8 +220,15 @@ func generatePackageDoc(pkg analyzer.Package, filePath string, cfg GeneratorConf
 		}
 	}
 
-	readmePath := filepath.Join(pkgDir, "README.md")
 	return os.WriteFile(readmePath, []byte(b.String()), 0644)
+}
+
+func getDisplayPath(fullPath string) string {
+	parts := strings.Split(filepath.Clean(fullPath), string(filepath.Separator))
+	if len(parts) < 2 {
+		return fullPath
+	}
+	return filepath.Join(parts[len(parts)-2:]...)
 }
 
 func generateSidebar(result *analyzer.AnalyzerResult, cfg GeneratorConfig) error {

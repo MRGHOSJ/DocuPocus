@@ -1,8 +1,196 @@
 # 📦 Package: `backend`
 
-> 📍 `C:\Users\DELL\Documents\GitHub\DocuPocus\internal\ai\backend\openrouter.go`
-
 [← Back to Overview](../README.md)
+
+## 📄 File: `backend.go`
+
+> 📍 `backend\backend.go`
+
+## 📑 Contents
+
+- [🧱 Structs (1)](#-structs)
+
+## 🧱 Structs
+
+### `BackendConfig`
+
+```go
+type BackendConfig struct {
+	Model string 
+	Endpoint string 
+	APIKey string 
+	RateLimit int 
+	MaxRetries int 
+	BatchSize int 
+	TokenBudget int 
+	Prompt string 
+}
+```
+
+**Summary:** Configuration struct for AI backend settings
+
+**Parameters:**
+- `Model` (string): AI model identifier
+- `Endpoint` (string): API endpoint URL
+- `APIKey` (string): Authentication key
+- `RateLimit` (int): Requests per minute limit
+- `MaxRetries` (int): Maximum retry attempts
+- `BatchSize` (int): Processing batch size
+- `TokenBudget` (int): Maximum token allowance
+- `Prompt` (string): Default prompt template
+
+**Returns:** N/A (configuration struct)
+
+**Complexity:**
+- Time: N/A
+- Space: O(1)
+
+**Example:**
+```go
+config := BackendConfig{Model: "gpt-4", Endpoint: "https://api.openai.com"}
+```
+
+**Edge Cases:**
+- Empty required fields
+- Invalid rate limit values
+- Exceeding token budget
+
+
+---
+
+
+---
+
+## 📄 File: `ollama.go`
+
+> 📍 `backend\ollama.go`
+
+## 📑 Contents
+
+- [🧱 Structs (1)](#-structs)
+- [🔧 Functions (3)](#-functions)
+
+## 🧱 Structs
+
+### `OllamaBackend`
+
+```go
+type OllamaBackend struct {
+	client *api.Client 
+	config BackendConfig 
+}
+```
+
+**Summary:** Ollama backend implementation struct
+
+**Parameters:**
+- `client` (*api.Client): API client instance
+- `config` (BackendConfig): Backend configuration
+
+**Returns:** N/A (implementation struct)
+
+**Complexity:**
+- Time: N/A
+- Space: O(1)
+
+**Example:**
+```go
+backend := OllamaBackend{client: apiClient, config: cfg}
+```
+
+**Edge Cases:**
+- Nil client pointer
+- Invalid configuration
+- Authentication failures
+
+
+---
+
+## 🔧 Functions
+
+<details>
+<summary><b><code>NewOllamaBackend(cfg BackendConfig)</code></b></summary>
+
+**Summary:** Creates a new OllamaBackend instance with given configuration
+
+**Parameters:**
+- `cfg` (BackendConfig): Configuration for the backend
+
+**Returns:** Pointer to OllamaBackend instance and error if initialization fails
+
+**Complexity:**
+- Time: O(1)
+- Space: O(1)
+
+**Example:**
+```go
+backend, err := NewOllamaBackend(config)
+```
+
+**Edge Cases:**
+- Invalid configuration leading to initialization failure
+- Nil configuration input
+
+
+</details>
+
+<details>
+<summary><b><code>Name()</code></b></summary>
+
+**Summary:** Returns the name of the OllamaBackend instance
+
+**Returns:** Name of the backend as string
+
+**Complexity:**
+- Time: O(1)
+- Space: O(1)
+
+**Example:**
+```go
+name := backend.Name()
+```
+
+**Edge Cases:**
+- Called on nil receiver
+- Empty name string returned
+
+
+</details>
+
+<details>
+<summary><b><code>Call(ctx context.Context, prompt string)</code></b></summary>
+
+**Summary:** Executes a prompt call on the OllamaBackend
+
+**Parameters:**
+- `ctx` (context.Context): Context for cancellation/timeout
+- `prompt` (string): Input prompt to process
+
+**Returns:** Response string and error if call fails
+
+**Complexity:**
+- Time: O(n) where n is processing complexity
+- Space: O(m) where m is response size
+
+**Example:**
+```go
+response, err := backend.Call(ctx, "Hello world")
+```
+
+**Edge Cases:**
+- Context cancellation during execution
+- Empty prompt input
+- Network/timeout errors
+
+
+</details>
+
+
+---
+
+## 📄 File: `openrouter.go`
+
+> 📍 `backend\openrouter.go`
 
 ## 📑 Contents
 
