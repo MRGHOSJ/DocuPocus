@@ -28,7 +28,7 @@ func NewClient(backend ai.Backend, cfg ai.BackendConfig) *Client {
 
 func (c *Client) ApplyDefaults() {
 	if c.config.BatchSize <= 0 {
-		c.config.BatchSize = 1
+		c.config.BatchSize = 3
 	}
 	if c.config.TokenBudget <= 0 {
 		c.config.TokenBudget = 7000

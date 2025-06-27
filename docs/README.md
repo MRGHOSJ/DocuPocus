@@ -92,11 +92,23 @@
 
 ### [ai](ai\README.md)
 
-`C:\Users\DELL\Documents\GitHub\DocuPocus\internal\ai\cache.go`
+`C:\Users\DELL\Documents\GitHub\DocuPocus\internal\ai\batching.go`
+
+- 0 structs
+- 6 functions
+- 📊 0% documented
+
+</td>
+<tr>
+<td valign="top" width="33%%">
+
+### [cache](cache\README.md)
+
+`C:\Users\DELL\Documents\GitHub\DocuPocus\internal\ai\cache\cache.go`
 
 - 2 structs
-- 4 functions
-- 📊 16% documented
+- 7 functions
+- 📊 22% documented
 
 </td>
 <tr>
@@ -106,9 +118,9 @@
 
 `C:\Users\DELL\Documents\GitHub\DocuPocus\internal\ai\client.go`
 
-- 3 structs
-- 10 functions
-- 📊 15% documented
+- 1 structs
+- 9 functions
+- 📊 0% documented
 
 </td>
 <tr>
@@ -128,11 +140,47 @@
 
 ### [ai](ai\README.md)
 
+`C:\Users\DELL\Documents\GitHub\DocuPocus\internal\ai\parser.go`
+
+- 0 structs
+- 2 functions
+- 📊 0% documented
+
+</td>
+<tr>
+<td valign="top" width="33%%">
+
+### [ai](ai\README.md)
+
+`C:\Users\DELL\Documents\GitHub\DocuPocus\internal\ai\prompt.go`
+
+- 0 structs
+- 3 functions
+- 📊 0% documented
+
+</td>
+<tr>
+<td valign="top" width="33%%">
+
+### [ai](ai\README.md)
+
 `C:\Users\DELL\Documents\GitHub\DocuPocus\internal\ai\token.go`
 
 - 0 structs
 - 4 functions
 - 📊 75% documented
+
+</td>
+<tr>
+<td valign="top" width="33%%">
+
+### [types](types\README.md)
+
+`C:\Users\DELL\Documents\GitHub\DocuPocus\internal\ai\types\documentation.go`
+
+- 4 structs
+- 0 functions
+- 📊 50% documented
 
 </td>
 <tr>
@@ -155,8 +203,8 @@
 `C:\Users\DELL\Documents\GitHub\DocuPocus\internal\analyzer\analyzer.go`
 
 - 7 structs
-- 2 functions
-- 📊 11% documented
+- 4 functions
+- 📊 9% documented
 
 </td>
 <tr>
@@ -203,8 +251,8 @@
 `C:\Users\DELL\Documents\GitHub\DocuPocus\internal\analyzer\yaml_analyzer.go`
 
 - 1 structs
-- 3 functions
-- 📊 0% documented
+- 25 functions
+- 📊 3% documented
 
 </td>
 <tr>
@@ -214,9 +262,9 @@
 
 `C:\Users\DELL\Documents\GitHub\DocuPocus\internal\generator\generator.go`
 
-- 2 structs
-- 12 functions
-- 📊 14% documented
+- 3 structs
+- 18 functions
+- 📊 23% documented
 
 </td>
 <tr>
