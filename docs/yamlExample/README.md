@@ -6,13 +6,10 @@
 
 > 📍 Path: `devops-pi-main\backend-deployment.yaml`
 
-<details>
-<summary>🚀 Resource Summary</summary>
+🚀 Resource Summary
 
 - **Kind:** `Deployment`
 - **Description:** Kubernetes Deployment configuration for a Spring Boot application
-
-</details>
 
 <details>
 <summary>⚙️ Configuration Example for `Deployment`</summary>
@@ -96,14 +93,21 @@ spec:
 <summary>`spec.template`</summary>
 
 - **Type:** `map`
-- **Description:** Pod template
+- **Description:** Pod template specification
 </details>
 
 <details>
 <summary>`spec.template.spec.containers`</summary>
 
 - **Type:** `array`
-- **Description:** Container specifications
+- **Description:** Container configurations
+</details>
+
+<details>
+<summary>`spec.template.spec.containers[].ports`</summary>
+
+- **Type:** `array`
+- **Description:** Container port mappings
 </details>
 
 <details>
@@ -119,35 +123,41 @@ spec:
 <summary>🔍 Examples</summary>
 
 ```yaml
-spec.replicas: 2
-spec.template.spec.containers[0].env[0].name: SPRING_DATASOURCE_URL
 spec.template.spec.containers[0].image: meowster/skillexchange-spring-app:latest
+spec.template.spec.containers[0].env[0].name: SPRING_DATASOURCE_URL
+spec.replicas: 2
+spec.selector.matchLabels.app: backend
+spec.template.spec.containers[0].ports[0].containerPort: 8084
 apiVersion: apps/v1
 kind: Deployment
 metadata.name: backend
+spec.template.metadata.labels.app: backend
+spec.template.spec.containers[0].name: spring-app
 ```
 </details>
 
 <details>
 <summary>🌐 Defaults</summary>
 
+- **apiVersion**: `apps/v1`
+- **kind**: `Deployment`
 - **spec.replicas**: `1`
-- **spec.template.spec.containers[0].ports[0].containerPort**: `8080`
 </details>
 
 <details>
 <summary>🧰 Usage</summary>
 
-Deploying a Spring Boot application with MySQL database connectivity
+Defines a Kubernetes deployment for a Spring Boot application with MySQL database connectivity
 </details>
 
 <details>
 <summary>⚠️ Edge Cases</summary>
 
-- Avoid using 'latest' tag in production
-- Use Secrets for sensitive data like passwords
+- Use specific image tags instead of 'latest' in production
+- Store sensitive data (passwords) in Secrets rather than environment variables
 - Define resource limits for containers
-- Use ConfigMaps for environment variables when possible
+- Use ConfigMaps for environment configuration when possible
+- Consider liveness and readiness probes for health checks
 </details>
 
 
@@ -157,13 +167,10 @@ Deploying a Spring Boot application with MySQL database connectivity
 
 > 📍 Path: `devops-pi-main\backend-service.yaml`
 
-<details>
-<summary>🚀 Resource Summary</summary>
+🚀 Resource Summary
 
 - **Kind:** `Service`
-- **Description:** Defines a Kubernetes Service for network access to pods
-
-</details>
+- **Description:** Defines a Kubernetes Service for backend application traffic routing
 
 <details>
 <summary>⚙️ Configuration Example for `Service`</summary>
@@ -239,21 +246,21 @@ spec:
 <summary>`spec.ports`</summary>
 
 - **Type:** `array`
-- **Description:** Exposed ports configuration
+- **Description:** Port configurations
 </details>
 
 <details>
-<summary>`spec.ports[0].port`</summary>
+<summary>`spec.ports[].port`</summary>
 
 - **Type:** `scalar`
-- **Description:** Service port number
+- **Description:** Service exposed port
 </details>
 
 <details>
-<summary>`spec.ports[0].targetPort`</summary>
+<summary>`spec.ports[].targetPort`</summary>
 
 - **Type:** `scalar`
-- **Description:** Target pod port
+- **Description:** Pod target port
 </details>
 
 <details>
@@ -269,13 +276,13 @@ spec:
 <summary>🔍 Examples</summary>
 
 ```yaml
-metadata.name: backend
+spec.selector.app: backend
 spec.ports[0].port: 8084
 spec.ports[0].targetPort: 8084
-spec.selector.app: backend
 spec.type: ClusterIP
 apiVersion: v1
 kind: Service
+metadata.name: backend
 ```
 </details>
 
@@ -283,19 +290,20 @@ kind: Service
 <summary>🌐 Defaults</summary>
 
 - **spec.type**: `ClusterIP`
+- **spec.ports[0].targetPort**: `(same as port)`
 </details>
 
 <details>
 <summary>🧰 Usage</summary>
 
-Exposes backend pods internally via a stable ClusterIP
+Exposes backend pods internally via ClusterIP on port 8084
 </details>
 
 <details>
 <summary>⚠️ Edge Cases</summary>
 
-- Use meaningful metadata.name
-- Ensure selector matches pod labels
+- Keep targetPort identical to port when possible
+- Use explicit selectors matching pod labels
 - Prefer ClusterIP for internal services
 </details>
 
@@ -306,13 +314,10 @@ Exposes backend pods internally via a stable ClusterIP
 
 > 📍 Path: `devops-pi-main\frontend-deployment.yaml`
 
-<details>
-<summary>🚀 Resource Summary</summary>
+🚀 Resource Summary
 
 - **Kind:** `Deployment`
 - **Description:** Kubernetes Deployment configuration for a frontend application
-
-</details>
 
 <details>
 <summary>⚙️ Configuration Example for `Deployment`</summary>
@@ -372,13 +377,6 @@ spec:
 </details>
 
 <details>
-<summary>`spec`</summary>
-
-- **Type:** `map`
-- **Description:** Deployment specification
-</details>
-
-<details>
 <summary>`spec.replicas`</summary>
 
 - **Type:** `scalar`
@@ -386,17 +384,17 @@ spec:
 </details>
 
 <details>
-<summary>`spec.selector`</summary>
+<summary>`spec.selector.matchLabels`</summary>
 
 - **Type:** `map`
-- **Description:** Pod selection criteria
+- **Description:** Pod selection labels
 </details>
 
 <details>
-<summary>`spec.template`</summary>
+<summary>`spec.template.metadata.labels`</summary>
 
 - **Type:** `map`
-- **Description:** Pod template
+- **Description:** Pod template labels
 </details>
 
 <details>
@@ -407,10 +405,31 @@ spec:
 </details>
 
 <details>
+<summary>`spec.template.spec.containers[].name`</summary>
+
+- **Type:** `scalar`
+- **Description:** Container name
+</details>
+
+<details>
+<summary>`spec.template.spec.containers[].image`</summary>
+
+- **Type:** `scalar`
+- **Description:** Container image
+</details>
+
+<details>
 <summary>`spec.template.spec.containers[].ports`</summary>
 
 - **Type:** `array`
 - **Description:** Container ports
+</details>
+
+<details>
+<summary>`spec.template.spec.containers[].env`</summary>
+
+- **Type:** `array`
+- **Description:** Environment variables
 </details>
 
 </details>
@@ -419,34 +438,39 @@ spec:
 <summary>🔍 Examples</summary>
 
 ```yaml
-spec.template.spec.containers[0].image: meowster/angular-app:latest
-apiVersion: apps/v1
 kind: Deployment
 metadata.name: frontend
 spec.replicas: 2
 spec.selector.matchLabels.app: frontend
+spec.template.spec.containers[0].name: angular-frontend
+spec.template.spec.containers[0].env[0].name: DOCKER_APIURL
+apiVersion: apps/v1
+spec.template.metadata.labels.app: frontend
+spec.template.spec.containers[0].image: meowster/angular-app:latest
+spec.template.spec.containers[0].ports[0].containerPort: 80
 ```
 </details>
 
 <details>
 <summary>🌐 Defaults</summary>
 
+- **apiVersion**: `apps/v1`
 - **spec.replicas**: `1`
 </details>
 
 <details>
 <summary>🧰 Usage</summary>
 
-Defines a scalable frontend application deployment in Kubernetes
+Deploying a scalable frontend application with environment variables
 </details>
 
 <details>
 <summary>⚠️ Edge Cases</summary>
 
 - Always specify resource limits for containers
-- Use explicit image tags (avoid 'latest')
-- Define liveness/readiness probes
-- Match selector labels with pod labels
+- Use immutable image tags (avoid 'latest') in production
+- Match selector labels with pod template labels
+- Define readiness/liveness probes for containers
 </details>
 
 
@@ -456,13 +480,10 @@ Defines a scalable frontend application deployment in Kubernetes
 
 > 📍 Path: `devops-pi-main\frontend-service.yaml`
 
-<details>
-<summary>🚀 Resource Summary</summary>
+🚀 Resource Summary
 
 - **Kind:** `Service`
 - **Description:** Defines a Kubernetes Service to expose an application
-
-</details>
 
 <details>
 <summary>⚙️ Configuration Example for `Service`</summary>
@@ -525,7 +546,7 @@ spec:
 <summary>`spec.selector`</summary>
 
 - **Type:** `map`
-- **Description:** Pod selector labels
+- **Description:** Pod selection labels
 </details>
 
 <details>
@@ -539,7 +560,7 @@ spec:
 <summary>`spec.ports`</summary>
 
 - **Type:** `array`
-- **Description:** Port mappings
+- **Description:** Port configurations
 </details>
 
 <details>
@@ -560,14 +581,14 @@ spec:
 <summary>`spec.ports[].nodePort`</summary>
 
 - **Type:** `scalar`
-- **Description:** Node port (30000-32767)
+- **Description:** Node port (when type=NodePort)
 </details>
 
 <details>
 <summary>`spec.type`</summary>
 
 - **Type:** `scalar`
-- **Description:** Service type (NodePort)
+- **Description:** Service type (ClusterIP/NodePort/LoadBalancer)
 </details>
 
 </details>
@@ -578,30 +599,35 @@ spec:
 ```yaml
 apiVersion: v1
 kind: Service
-metadata: map[name:frontend]
-spec: map[ports:[map[nodePort:30080 port:80 targetPort:80]] selector:map[app:frontend] type:NodePort]
+metadata.name: frontend
+spec.selector.app: frontend
+spec.ports[0].port: 80
+spec.ports[0].targetPort: 80
+spec.ports[0].nodePort: 30080
+spec.type: NodePort
 ```
 </details>
 
 <details>
 <summary>🌐 Defaults</summary>
 
-- **spec.ports[].protocol**: `TCP`
 - **spec.type**: `ClusterIP`
+- **apiVersion**: `v1`
 </details>
 
 <details>
 <summary>🧰 Usage</summary>
 
-Exposes a deployment externally via static port on worker nodes
+Exposes frontend pods on port 30080 via NodePort
 </details>
 
 <details>
 <summary>⚠️ Edge Cases</summary>
 
 - Use meaningful metadata.name
-- NodePort should be in 30000-32767 range
 - Match selector.app with pod labels
+- Avoid privileged ports (<1024) for nodePort
+- Prefer ClusterIP for internal services
 </details>
 
 
@@ -611,13 +637,10 @@ Exposes a deployment externally via static port on worker nodes
 
 > 📍 Path: `devops-pi-main\ingress.yaml`
 
-<details>
-<summary>🚀 Resource Summary</summary>
+🚀 Resource Summary
 
 - **Kind:** `Ingress`
-- **Description:** Defines Kubernetes Ingress rules for routing HTTP traffic
-
-</details>
+- **Description:** Defines routing rules for external access to Kubernetes services
 
 <details>
 <summary>⚙️ Configuration Example for `Ingress`</summary>
@@ -695,13 +718,6 @@ spec:
 </details>
 
 <details>
-<summary>`spec.rules[].http.paths`</summary>
-
-- **Type:** `array`
-- **Description:** Path-based routing rules
-</details>
-
-<details>
 <summary>`spec.rules[].http.paths[].path`</summary>
 
 - **Type:** `scalar`
@@ -719,21 +735,7 @@ spec:
 <summary>`spec.rules[].http.paths[].backend.service`</summary>
 
 - **Type:** `map`
-- **Description:** Backend service reference
-</details>
-
-<details>
-<summary>`spec.rules[].http.paths[].backend.service.name`</summary>
-
-- **Type:** `scalar`
-- **Description:** Service name
-</details>
-
-<details>
-<summary>`spec.rules[].http.paths[].backend.service.port.number`</summary>
-
-- **Type:** `scalar`
-- **Description:** Service port
+- **Description:** Target service definition
 </details>
 
 </details>
@@ -742,14 +744,11 @@ spec:
 <summary>🔍 Examples</summary>
 
 ```yaml
-spec.rules[0].http.paths[0].backend.service.port.number: 8084
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata.name: app-ingress
-spec.rules[0].http.paths[0].path: /skillExchange
-spec.rules[0].http.paths[0].pathType: Prefix
-metadata.namespace: piproject
 spec.ingressClassName: nginx
+spec.rules[0].http.paths[0].path: /skillExchange
 spec.rules[0].http.paths[0].backend.service.name: backend
 ```
 </details>
@@ -763,16 +762,16 @@ spec.rules[0].http.paths[0].backend.service.name: backend
 <details>
 <summary>🧰 Usage</summary>
 
-Configures external HTTP access to cluster services via path-based routing
+Configures external HTTP access to multiple services with path-based routing
 </details>
 
 <details>
 <summary>⚠️ Edge Cases</summary>
 
 - Always specify pathType explicitly
-- Use descriptive path names matching your application structure
-- Restrict namespace access where applicable
-- Document ingress controller requirements
+- Use descriptive path names
+- Limit wildcard paths ('/') to avoid conflicts
+- Match ingressClassName with your cluster's controller
 </details>
 
 
@@ -782,13 +781,10 @@ Configures external HTTP access to cluster services via path-based routing
 
 > 📍 Path: `devops-pi-main\mysql-deployment.yaml`
 
-<details>
-<summary>🚀 Resource Summary</summary>
+🚀 Resource Summary
 
 - **Kind:** `StorageClass`
 - **Description:** Defines a Kubernetes StorageClass for persistent volumes
-
-</details>
 
 <details>
 <summary>⚙️ Configuration Example for `StorageClass`</summary>
@@ -824,14 +820,14 @@ volumeBindingMode: Immediate
 <summary>`metadata`</summary>
 
 - **Type:** `map`
-- **Description:** Object metadata including name
+- **Description:** Metadata including StorageClass name
 </details>
 
 <details>
 <summary>`provisioner`</summary>
 
 - **Type:** `scalar`
-- **Description:** Volume plugin for provisioning
+- **Description:** Volume provisioner plugin
 </details>
 
 <details>
@@ -864,23 +860,21 @@ volumeBindingMode: Immediate
 <details>
 <summary>🧰 Usage</summary>
 
-Used to define storage provisioning behavior for PersistentVolumeClaims
+Defines storage provisioning behavior for PersistentVolumeClaims
 </details>
 
 <details>
 <summary>⚠️ Edge Cases</summary>
 
-- Use explicit volumeBindingMode for dynamic provisioning
-- Avoid no-provisioner in production without external volume management
+- Use explicit provisioners for production environments
+- Consider WaitForFirstConsumer mode for topology-aware scheduling
+- Name StorageClasses meaningfully (avoid 'default')
 </details>
 
-<details>
-<summary>🚀 Resource Summary</summary>
+🚀 Resource Summary
 
 - **Kind:** `PersistentVolume`
 - **Description:** Defines a PersistentVolume for cluster storage
-
-</details>
 
 <details>
 <summary>⚙️ Configuration Example for `PersistentVolume`</summary>
@@ -929,7 +923,7 @@ spec:
 <summary>`metadata.name`</summary>
 
 - **Type:** `scalar`
-- **Description:** PV identifier
+- **Description:** PV name
 </details>
 
 <details>
@@ -964,14 +958,14 @@ spec:
 <summary>`spec.hostPath`</summary>
 
 - **Type:** `map`
-- **Description:** Host machine path binding
+- **Description:** Host machine path mapping
 </details>
 
 <details>
 <summary>`spec.hostPath.path`</summary>
 
 - **Type:** `scalar`
-- **Description:** Filesystem path
+- **Description:** Filesystem path on host
 </details>
 
 </details>
@@ -980,43 +974,41 @@ spec:
 <summary>🔍 Examples</summary>
 
 ```yaml
+spec.storageClassName: manual-hostpath
+spec.hostPath.path: /mnt/data/mysql
 apiVersion: v1
 kind: PersistentVolume
 metadata.name: mysql-pv
-spec.accessModes: [ReadWriteOnce]
 spec.capacity.storage: 2Gi
-spec.hostPath.path: /mnt/data/mysql
-spec.storageClassName: manual-hostpath
+spec.accessModes: [ReadWriteOnce]
 ```
 </details>
 
 <details>
 <summary>🌐 Defaults</summary>
 
-- **storageClassName**: `<nil>`
+- **apiVersion**: `v1`
+- **accessModes**: `[ReadWriteOnce]`
 </details>
 
 <details>
 <summary>🧰 Usage</summary>
 
-Provisioning durable storage for stateful applications like databases
+Provisioning persistent storage for applications like databases
 </details>
 
 <details>
 <summary>⚠️ Edge Cases</summary>
 
-- Avoid hostPath for production (use cloud volumes/NFS)
-- Set reclaimPolicy explicitly
+- Avoid hostPath in production (use cloud volumes/NFS)
+- Explicitly set reclaimPolicy
 - Match accessModes with workload requirements
 </details>
 
-<details>
-<summary>🚀 Resource Summary</summary>
+🚀 Resource Summary
 
 - **Kind:** `PersistentVolumeClaim`
 - **Description:** Defines a PersistentVolumeClaim for storage allocation
-
-</details>
 
 <details>
 <summary>⚙️ Configuration Example for `PersistentVolumeClaim`</summary>
@@ -1043,7 +1035,7 @@ spec:
 <summary>`apiVersion`</summary>
 
 - **Type:** `scalar`
-- **Description:** Kubernetes API version
+- **Description:** API version (v1)
 </details>
 
 <details>
@@ -1057,7 +1049,7 @@ spec:
 <summary>`metadata`</summary>
 
 - **Type:** `map`
-- **Description:** Resource metadata
+- **Description:** Object metadata
 </details>
 
 <details>
@@ -1065,13 +1057,6 @@ spec:
 
 - **Type:** `scalar`
 - **Description:** PVC identifier
-</details>
-
-<details>
-<summary>`spec`</summary>
-
-- **Type:** `map`
-- **Description:** PVC specifications
 </details>
 
 <details>
@@ -1089,17 +1074,10 @@ spec:
 </details>
 
 <details>
-<summary>`spec.resources`</summary>
-
-- **Type:** `map`
-- **Description:** Resource requests/limits
-</details>
-
-<details>
 <summary>`spec.resources.requests.storage`</summary>
 
 - **Type:** `scalar`
-- **Description:** Storage size request
+- **Description:** Storage capacity request
 </details>
 
 </details>
@@ -1108,12 +1086,10 @@ spec:
 <summary>🔍 Examples</summary>
 
 ```yaml
-apiVersion: v1
-kind: PersistentVolumeClaim
 metadata.name: mysql-pvc
 spec.accessModes: [ReadWriteOnce]
-spec.resources.requests.storage: 2Gi
 spec.storageClassName: manual-hostpath
+spec.resources.requests.storage: 2Gi
 ```
 </details>
 
@@ -1121,30 +1097,27 @@ spec.storageClassName: manual-hostpath
 <summary>🌐 Defaults</summary>
 
 - **apiVersion**: `v1`
-- **storageClassName**: `default`
+- **kind**: `PersistentVolumeClaim`
 </details>
 
 <details>
 <summary>🧰 Usage</summary>
 
-Requesting persistent storage for stateful applications like databases
+Requesting persistent storage for applications like databases
 </details>
 
 <details>
 <summary>⚠️ Edge Cases</summary>
 
-- Always specify accessModes matching application requirements
-- Avoid empty storageClassName (may trigger default provisioner)
-- Set realistic storage requests to prevent over-provisioning
+- Use explicit storageClassName (avoid default)
+- Align accessModes with workload requirements
+- Set realistic storage requests
 </details>
 
-<details>
-<summary>🚀 Resource Summary</summary>
+🚀 Resource Summary
 
 - **Kind:** `Deployment`
 - **Description:** Kubernetes Deployment configuration for MySQL with persistent storage
-
-</details>
 
 <details>
 <summary>⚙️ Configuration Example for `Deployment`</summary>
@@ -1195,10 +1168,17 @@ spec:
 </details>
 
 <details>
-<summary>`metadata.name`</summary>
+<summary>`metadata`</summary>
 
-- **Type:** `scalar`
-- **Description:** Deployment name
+- **Type:** `map`
+- **Description:** Resource metadata including name
+</details>
+
+<details>
+<summary>`spec`</summary>
+
+- **Type:** `map`
+- **Description:** Deployment specification
 </details>
 
 <details>
@@ -1209,17 +1189,24 @@ spec:
 </details>
 
 <details>
-<summary>`spec.selector.matchLabels`</summary>
+<summary>`spec.selector`</summary>
 
 - **Type:** `map`
-- **Description:** Pod selection labels
+- **Description:** Pod selection criteria
+</details>
+
+<details>
+<summary>`spec.template`</summary>
+
+- **Type:** `map`
+- **Description:** Pod template specification
 </details>
 
 <details>
 <summary>`spec.template.spec.containers`</summary>
 
 - **Type:** `array`
-- **Description:** Container specifications
+- **Description:** Container configurations
 </details>
 
 <details>
@@ -1249,14 +1236,13 @@ spec:
 <summary>🔍 Examples</summary>
 
 ```yaml
-kind: Deployment
 metadata.name: mysql
 spec.replicas: 1
-spec.selector.matchLabels.app: mysql
-spec.template.spec.containers[0].env[0].name: MYSQL_ROOT_PASSWORD
 spec.template.spec.containers[0].image: mysql:8.0
-spec.template.spec.volumes[0].persistentVolumeClaim.claimName: mysql-pvc
+spec.template.spec.containers[0].env[0].name: MYSQL_ROOT_PASSWORD
+spec.template.spec.containers[0].ports[0].containerPort: 3306
 apiVersion: apps/v1
+kind: Deployment
 ```
 </details>
 
@@ -1276,11 +1262,11 @@ Deploying a stateful MySQL database with persistent storage in Kubernetes
 <details>
 <summary>⚠️ Edge Cases</summary>
 
-- Always set resource limits for database containers
-- Use secrets for sensitive environment variables like passwords
-- Ensure PVC exists before deployment
-- Consider using ConfigMaps for non-sensitive configuration
-- Use specific image tags (not 'latest') for production
+- Never store sensitive data like passwords directly in YAML (use Secrets)
+- Specify resource limits for containers
+- Use specific image tags (avoid 'latest')
+- Consider readiness/liveness probes for database containers
+- Use proper storage class for production databases
 </details>
 
 
@@ -1290,13 +1276,10 @@ Deploying a stateful MySQL database with persistent storage in Kubernetes
 
 > 📍 Path: `devops-pi-main\mysql-service.yaml`
 
-<details>
-<summary>🚀 Resource Summary</summary>
+🚀 Resource Summary
 
 - **Kind:** `Service`
 - **Description:** Defines a Kubernetes Service for MySQL with headless configuration
-
-</details>
 
 <details>
 <summary>⚙️ Configuration Example for `Service`</summary>
@@ -1358,42 +1341,42 @@ spec:
 <summary>`spec.selector`</summary>
 
 - **Type:** `map`
-- **Description:** Pod selection labels
+- **Description:** Pod selector labels
 </details>
 
 <details>
 <summary>`spec.selector.app`</summary>
 
 - **Type:** `scalar`
-- **Description:** Label selector for MySQL pods
+- **Description:** Target pod label
 </details>
 
 <details>
 <summary>`spec.ports`</summary>
 
 - **Type:** `array`
-- **Description:** Exposed ports configuration
+- **Description:** Exposed ports
 </details>
 
 <details>
 <summary>`spec.ports[0].port`</summary>
 
 - **Type:** `scalar`
-- **Description:** Service port number
+- **Description:** Service port
 </details>
 
 <details>
 <summary>`spec.ports[0].targetPort`</summary>
 
 - **Type:** `scalar`
-- **Description:** Target pod port number
+- **Description:** Pod port
 </details>
 
 <details>
 <summary>`spec.clusterIP`</summary>
 
 - **Type:** `scalar`
-- **Description:** Cluster IP assignment
+- **Description:** Cluster IP setting
 </details>
 
 </details>
@@ -1402,13 +1385,13 @@ spec:
 <summary>🔍 Examples</summary>
 
 ```yaml
-apiVersion: v1
 kind: Service
 metadata.name: mysql
-spec.clusterIP: None
+spec.selector.app: mysql
 spec.ports[0].port: 3306
 spec.ports[0].targetPort: 3306
-spec.selector.app: mysql
+spec.clusterIP: None
+apiVersion: v1
 ```
 </details>
 
@@ -1416,20 +1399,20 @@ spec.selector.app: mysql
 <summary>🌐 Defaults</summary>
 
 - **apiVersion**: `v1`
-- **spec.clusterIP**: `Automatically assigned if not specified`
+- **clusterIP**: `Automatically assigned if not 'None'`
 </details>
 
 <details>
 <summary>🧰 Usage</summary>
 
-Creates a headless Service for MySQL pods in Kubernetes (DNS resolution without load balancing)
+Creates a headless Service for MySQL pods in Kubernetes
 </details>
 
 <details>
 <summary>⚠️ Edge Cases</summary>
 
 - Use headless Services (clusterIP: None) for stateful applications
-- Ensure port numbers match container exposed ports
-- Selector labels must match pod labels exactly
+- Ensure selector matches pod labels exactly
+- Explicitly define targetPort for clarity
 </details>
 
