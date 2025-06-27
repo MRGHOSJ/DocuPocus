@@ -30,10 +30,28 @@ spec:
         app: backend
     spec:
       containers:
-        - name: spring-app
+        - 
+          name: spring-app
           image: meowster/skillexchange-spring-app:latest
-          ports: 
-          env: 
+          ports:
+            - 
+              containerPort: 8084
+          env:
+            - 
+              name: SPRING_DATASOURCE_URL
+              value: jdbc:mysql://mysql:3306/skill_exchange?useSSL=false&allowPublicKeyRetrieval=true
+            - 
+              name: SPRING_DATASOURCE_USERNAME
+              value: root
+            - 
+              name: SPRING_DATASOURCE_PASSWORD
+              value: rootpassword
+            - 
+              name: SPRING_JPA_HIBERNATE_DDL_AUTO
+              value: update
+            - 
+              name: SPRING_DATASOURCE_DRIVER_CLASS_NAME
+              value: com.mysql.cj.jdbc.Driver
 ```
 </details>
 
@@ -123,16 +141,16 @@ spec:
 <summary>🔍 Examples</summary>
 
 ```yaml
-spec.template.spec.containers[0].image: meowster/skillexchange-spring-app:latest
-spec.template.spec.containers[0].env[0].name: SPRING_DATASOURCE_URL
-spec.replicas: 2
-spec.selector.matchLabels.app: backend
+spec.template.metadata.labels.app: backend
 spec.template.spec.containers[0].ports[0].containerPort: 8084
+spec.selector.matchLabels.app: backend
+spec.template.spec.containers[0].env[0].name: SPRING_DATASOURCE_URL
+spec.template.spec.containers[0].image: meowster/skillexchange-spring-app:latest
+spec.template.spec.containers[0].name: spring-app
 apiVersion: apps/v1
 kind: Deployment
 metadata.name: backend
-spec.template.metadata.labels.app: backend
-spec.template.spec.containers[0].name: spring-app
+spec.replicas: 2
 ```
 </details>
 
@@ -184,7 +202,8 @@ spec:
   selector:
     app: backend
   ports:
-    - port: 8084
+    - 
+      port: 8084
       targetPort: 8084
   type: ClusterIP
 ```
@@ -276,21 +295,21 @@ spec:
 <summary>🔍 Examples</summary>
 
 ```yaml
-spec.selector.app: backend
-spec.ports[0].port: 8084
 spec.ports[0].targetPort: 8084
+spec.selector.app: backend
 spec.type: ClusterIP
 apiVersion: v1
 kind: Service
 metadata.name: backend
+spec.ports[0].port: 8084
 ```
 </details>
 
 <details>
 <summary>🌐 Defaults</summary>
 
-- **spec.type**: `ClusterIP`
 - **spec.ports[0].targetPort**: `(same as port)`
+- **spec.type**: `ClusterIP`
 </details>
 
 <details>
@@ -338,10 +357,16 @@ spec:
         app: frontend
     spec:
       containers:
-        - name: angular-frontend
+        - 
+          name: angular-frontend
           image: meowster/angular-app:latest
-          ports: 
-          env: 
+          ports:
+            - 
+              containerPort: 80
+          env:
+            - 
+              name: DOCKER_APIURL
+              value: # TODO: Add value
 ```
 </details>
 
@@ -438,24 +463,24 @@ spec:
 <summary>🔍 Examples</summary>
 
 ```yaml
+apiVersion: apps/v1
 kind: Deployment
-metadata.name: frontend
 spec.replicas: 2
 spec.selector.matchLabels.app: frontend
-spec.template.spec.containers[0].name: angular-frontend
-spec.template.spec.containers[0].env[0].name: DOCKER_APIURL
-apiVersion: apps/v1
 spec.template.metadata.labels.app: frontend
 spec.template.spec.containers[0].image: meowster/angular-app:latest
+spec.template.spec.containers[0].name: angular-frontend
 spec.template.spec.containers[0].ports[0].containerPort: 80
+metadata.name: frontend
+spec.template.spec.containers[0].env[0].name: DOCKER_APIURL
 ```
 </details>
 
 <details>
 <summary>🌐 Defaults</summary>
 
-- **apiVersion**: `apps/v1`
 - **spec.replicas**: `1`
+- **apiVersion**: `apps/v1`
 </details>
 
 <details>
@@ -497,7 +522,8 @@ spec:
   selector:
     app: frontend
   ports:
-    - port: 80
+    - 
+      port: 80
       targetPort: 80
       nodePort: 30080
   type: NodePort
@@ -600,10 +626,10 @@ spec:
 apiVersion: v1
 kind: Service
 metadata.name: frontend
-spec.selector.app: frontend
+spec.ports[0].nodePort: 30080
 spec.ports[0].port: 80
 spec.ports[0].targetPort: 80
-spec.ports[0].nodePort: 30080
+spec.selector.app: frontend
 spec.type: NodePort
 ```
 </details>
@@ -611,8 +637,8 @@ spec.type: NodePort
 <details>
 <summary>🌐 Defaults</summary>
 
-- **spec.type**: `ClusterIP`
 - **apiVersion**: `v1`
+- **spec.type**: `ClusterIP`
 </details>
 
 <details>
@@ -654,7 +680,25 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-    - http: 
+    - 
+      http:
+        paths:
+          - 
+            path: /skillExchange
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 8084
+          - 
+            path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 80
 ```
 </details>
 
@@ -748,8 +792,8 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata.name: app-ingress
 spec.ingressClassName: nginx
-spec.rules[0].http.paths[0].path: /skillExchange
 spec.rules[0].http.paths[0].backend.service.name: backend
+spec.rules[0].http.paths[0].path: /skillExchange
 ```
 </details>
 
@@ -888,7 +932,7 @@ spec:
   capacity:
     storage: 2Gi
   accessModes:
-    - 
+    - # TODO: Add value
   storageClassName: manual-hostpath
   hostPath:
     path: /mnt/data/mysql
@@ -974,21 +1018,21 @@ spec:
 <summary>🔍 Examples</summary>
 
 ```yaml
-spec.storageClassName: manual-hostpath
+spec.accessModes: [ReadWriteOnce]
+spec.capacity.storage: 2Gi
 spec.hostPath.path: /mnt/data/mysql
+spec.storageClassName: manual-hostpath
 apiVersion: v1
 kind: PersistentVolume
 metadata.name: mysql-pv
-spec.capacity.storage: 2Gi
-spec.accessModes: [ReadWriteOnce]
 ```
 </details>
 
 <details>
 <summary>🌐 Defaults</summary>
 
-- **apiVersion**: `v1`
 - **accessModes**: `[ReadWriteOnce]`
+- **apiVersion**: `v1`
 </details>
 
 <details>
@@ -1020,7 +1064,7 @@ metadata:
   name: mysql-pvc
 spec:
   accessModes:
-    - 
+    - # TODO: Add value
   storageClassName: manual-hostpath
   resources:
     requests:
@@ -1088,8 +1132,8 @@ spec:
 ```yaml
 metadata.name: mysql-pvc
 spec.accessModes: [ReadWriteOnce]
-spec.storageClassName: manual-hostpath
 spec.resources.requests.storage: 2Gi
+spec.storageClassName: manual-hostpath
 ```
 </details>
 
@@ -1138,15 +1182,30 @@ spec:
         app: mysql
     spec:
       containers:
-        - name: mysql
+        - 
+          name: mysql
           image: mysql:8.0
-          args: 
-          env: 
-          ports: 
-          volumeMounts: 
+          args:
+            - # TODO: Add value
+          env:
+            - 
+              name: MYSQL_ROOT_PASSWORD
+              value: rootpassword
+            - 
+              name: MYSQL_DATABASE
+              value: skill_exchange
+          ports:
+            - 
+              containerPort: 3306
+          volumeMounts:
+            - 
+              name: mysql-storage
+              mountPath: /var/lib/mysql
       volumes:
-        - name: mysql-storage
-          persistentVolumeClaim: 
+        - 
+          name: mysql-storage
+          persistentVolumeClaim:
+            claimName: mysql-pvc
 ```
 </details>
 
@@ -1236,13 +1295,13 @@ spec:
 <summary>🔍 Examples</summary>
 
 ```yaml
-metadata.name: mysql
-spec.replicas: 1
-spec.template.spec.containers[0].image: mysql:8.0
-spec.template.spec.containers[0].env[0].name: MYSQL_ROOT_PASSWORD
 spec.template.spec.containers[0].ports[0].containerPort: 3306
 apiVersion: apps/v1
 kind: Deployment
+metadata.name: mysql
+spec.replicas: 1
+spec.template.spec.containers[0].env[0].name: MYSQL_ROOT_PASSWORD
+spec.template.spec.containers[0].image: mysql:8.0
 ```
 </details>
 
@@ -1293,7 +1352,8 @@ spec:
   selector:
     app: mysql
   ports:
-    - port: 3306
+    - 
+      port: 3306
       targetPort: 3306
   clusterIP: None
 ```
@@ -1385,21 +1445,21 @@ spec:
 <summary>🔍 Examples</summary>
 
 ```yaml
-kind: Service
 metadata.name: mysql
-spec.selector.app: mysql
+spec.clusterIP: None
 spec.ports[0].port: 3306
 spec.ports[0].targetPort: 3306
-spec.clusterIP: None
+spec.selector.app: mysql
 apiVersion: v1
+kind: Service
 ```
 </details>
 
 <details>
 <summary>🌐 Defaults</summary>
 
-- **apiVersion**: `v1`
 - **clusterIP**: `Automatically assigned if not 'None'`
+- **apiVersion**: `v1`
 </details>
 
 <details>

@@ -178,10 +178,11 @@ func generateYAMLDoc(pkg analyzer.Package, filePath string, cfg GeneratorConfig)
 
 		// Expandable Configuration Example
 		if len(s.Fields) > 0 {
+			normalizedFields := NormalizeFields(s.Fields)
 			b.WriteString("<details>\n")
 			b.WriteString(fmt.Sprintf("<summary>⚙️ Configuration Example for `%s`</summary>\n\n", s.Name))
 			b.WriteString("```yaml\n")
-			b.WriteString(generateYAMLExample(s.Fields, 0))
+			b.WriteString(generateYAMLExample(normalizedFields, 0))
 			b.WriteString("```\n")
 			b.WriteString("</details>\n\n")
 		}
@@ -247,38 +248,63 @@ func generateYAMLDoc(pkg analyzer.Package, filePath string, cfg GeneratorConfig)
 
 func generateYAMLExample(fields []analyzer.Field, indentLevel int) string {
 	var b strings.Builder
-	indent := strings.Repeat("  ", indentLevel)
+	baseIndent := strings.Repeat("  ", indentLevel)
 
 	for _, f := range fields {
-		fieldName := f.Name
-		fieldVal := f.Value
-
 		switch f.Type {
 		case "array":
-			b.WriteString(fmt.Sprintf("%s%s:\n", indent, fieldName))
+			// Write array key if present
+			if f.Name != "" {
+				b.WriteString(fmt.Sprintf("%s%s:\n", baseIndent, f.Name))
+			}
+
+			// If no items, add empty array placeholder
+			if len(f.Fields) == 0 {
+				b.WriteString(fmt.Sprintf("%s- # TODO: Add item\n", baseIndent+"  ")) // indent array item one more level
+				continue
+			}
+
+			// Process array items
 			for _, item := range f.Fields {
-				innerIndent := strings.Repeat("  ", indentLevel+1)
-				b.WriteString(innerIndent + "- ")
+				// Start list item
+				b.WriteString(fmt.Sprintf("%s- ", baseIndent+"  "))
+
+				// Case 1: item has nested fields -> complex object
 				if len(item.Fields) > 0 {
-					first := item.Fields[0]
-					b.WriteString(fmt.Sprintf("%s: %s\n", first.Name, first.Value))
-					for _, sub := range item.Fields[1:] {
-						b.WriteString(fmt.Sprintf("%s  %s: %s\n", innerIndent, sub.Name, sub.Value))
+					if item.Name != "" {
+						b.WriteString(fmt.Sprintf("%s:\n", item.Name))
+					} else {
+						b.WriteString("\n")
 					}
+					// recursively generate nested yaml with indentLevel+2 (one for itemIndent, one for nested)
+					b.WriteString(generateYAMLExample(item.Fields, indentLevel+2))
+					continue
+				}
+
+				// Case 2: simple key-value pair inside array item
+				if item.Name != "" {
+					b.WriteString(fmt.Sprintf("%s\n", fmt.Sprintf("%s: %s", item.Name, getValueOrPlaceholder(item))))
 				} else {
-					b.WriteString(item.Value + "\n")
+					// Case 3: plain value in array item
+					b.WriteString(fmt.Sprintf("%s\n", getValueOrPlaceholder(item)))
 				}
 			}
 
 		case "map":
-			b.WriteString(fmt.Sprintf("%s%s:\n", indent, fieldName))
-			b.WriteString(generateYAMLExample(f.Fields, indentLevel+1))
-
-		default:
-			if fieldVal != "" {
-				b.WriteString(fmt.Sprintf("%s%s: %s\n", indent, fieldName, fieldVal))
+			if f.Name != "" {
+				b.WriteString(fmt.Sprintf("%s%s:\n", baseIndent, f.Name))
+			}
+			if len(f.Fields) > 0 {
+				b.WriteString(generateYAMLExample(f.Fields, indentLevel+1))
 			} else {
-				b.WriteString(fmt.Sprintf("%s%s: # TODO: Add value\n", indent, fieldName))
+				b.WriteString(fmt.Sprintf("%s  %s\n", baseIndent, getValueOrPlaceholder(f)))
+			}
+
+		default: // scalar value
+			if f.Name != "" {
+				b.WriteString(fmt.Sprintf("%s%s: %s\n", baseIndent, f.Name, getValueOrPlaceholder(f)))
+			} else {
+				b.WriteString(fmt.Sprintf("%s%s\n", baseIndent, getValueOrPlaceholder(f)))
 			}
 		}
 	}
@@ -286,31 +312,68 @@ func generateYAMLExample(fields []analyzer.Field, indentLevel int) string {
 	return b.String()
 }
 
-// Helper to clean up empty markdown cells
-func safeMarkdown(s string) string {
-	if s == "" {
-		return "N/A"
+// Helper to get value or placeholder string
+func getValueOrPlaceholder(f analyzer.Field) string {
+	if f.Value != "" {
+		return f.Value
 	}
-	return s
+	switch f.Type {
+	case "array":
+		return "[]"
+	case "map":
+		return "{}"
+	default:
+		return "# TODO: Add value"
+	}
 }
 
-func isServiceFile(pkg analyzer.Package) bool {
-	for _, s := range pkg.Structs {
-		if strings.ToLower(s.Name) == "service" {
-			return true
-		}
-	}
-	return false
-}
+func NormalizeFields(fields []analyzer.Field) []analyzer.Field {
+	var normalized []analyzer.Field
 
-// Helper to check if this is a Kubernetes YAML file
-func isKubernetesFile(pkg analyzer.Package) bool {
-	for _, s := range pkg.Structs {
-		if strings.Contains(s.Doc.Summary, "Kubernetes") {
-			return true
+	for _, f := range fields {
+		if f.Type == "array" {
+			itemsMap := make(map[int]analyzer.Field)
+			maxIdx := -1
+
+			for _, item := range f.Fields {
+				var idx int
+				// Match index-based names like "[0]", "[1]", etc.
+				if _, err := fmt.Sscanf(item.Name, "[%d]", &idx); err == nil {
+					// Clear name to avoid printing as map key in YAML example
+					item.Name = ""
+					// Recursively normalize nested fields inside array item
+					item.Fields = NormalizeFields(item.Fields)
+					itemsMap[idx] = item
+					if idx > maxIdx {
+						maxIdx = idx
+					}
+				} else {
+					// If item.Name doesn't match index pattern, just keep it as is,
+					// recursively normalize children
+					item.Fields = NormalizeFields(item.Fields)
+					// Append directly to normalized fields (fallback)
+					normalized = append(normalized, item)
+				}
+			}
+
+			// Create ordered list from map by index
+			orderedItems := make([]analyzer.Field, 0, maxIdx+1)
+			for i := 0; i <= maxIdx; i++ {
+				if item, exists := itemsMap[i]; exists {
+					orderedItems = append(orderedItems, item)
+				}
+			}
+
+			f.Fields = orderedItems
+		} else if len(f.Fields) > 0 {
+			// Recursively normalize children fields
+			f.Fields = NormalizeFields(f.Fields)
 		}
+
+		normalized = append(normalized, f)
 	}
-	return false
+
+	return normalized
 }
 
 // New function to format YAML structs for AI processing
