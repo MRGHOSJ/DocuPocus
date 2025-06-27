@@ -100,7 +100,11 @@ func setupAIClient(backend, model, endpoint, apiKey string, verbose bool) (*ai.C
 	}
 
 	// Create the AI client
-	return ai.NewClient(backendImpl, cfg), nil
+	client := ai.NewClient(backendImpl, cfg)
+	client.ApplyDefaults()
+
+	return client, nil
+
 }
 
 func generateDocs(projectDir, template, outputFile string, aiClient *ai.Client, verbose bool) error {
@@ -110,6 +114,7 @@ func generateDocs(projectDir, template, outputFile string, aiClient *ai.Client, 
 
 	// Analyze project
 	result, err := analyzer.AnalyzeProject(projectDir)
+
 	if err != nil {
 		return fmt.Errorf("project analysis failed: %w", err)
 	}

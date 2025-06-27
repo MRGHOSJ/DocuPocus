@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/MRGHOSJ/docupocus/internal/ai"
+	ai "github.com/MRGHOSJ/docupocus/internal/ai/types"
 	"github.com/MRGHOSJ/docupocus/internal/utils"
 )
 

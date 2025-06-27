@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/MRGHOSJ/docupocus/internal/ai"
+	aiTypes "github.com/MRGHOSJ/docupocus/internal/ai/types"
 	"github.com/MRGHOSJ/docupocus/internal/analyzer"
 )
 
@@ -21,74 +22,341 @@ type GeneratorConfig struct {
 	}
 }
 
-type AIRequest struct {
+type AICodeRequest struct {
 	Input    string
-	Language string
-	Target   *ai.Documentation
+	Language string // e.g. "Go", "Python"
+	Target   *aiTypes.Documentation
+}
+
+type AIYAMLRequest struct {
+	Input    string
+	Language string // "YAML"
+	Target   *aiTypes.YAMLDocumentation
 }
 
 func GeneratePackageDocs(result *analyzer.AnalyzerResult, template string, cfg GeneratorConfig) error {
+	fmt.Println("📁 Creating output directory...")
 	if err := os.MkdirAll(cfg.OutputDir, 0755); err != nil {
 		return fmt.Errorf("failed to create doc directory: %w", err)
 	}
 
-	// Generate project-wide documentation
+	fmt.Println("📄 Generating project README...")
 	if err := generateProjectReadme(result, cfg); err != nil {
 		return fmt.Errorf("failed to generate project README: %w", err)
 	}
 
-	// Generate sidebar for navigation
+	fmt.Println("📚 Generating sidebar...")
 	if err := generateSidebar(result, cfg); err != nil {
 		return fmt.Errorf("failed to generate sidebar: %w", err)
 	}
 
-	// Process AI enhancements
-	var aiRequests []AIRequest
+	var codeRequests []AICodeRequest
+	var yamlRequests []AIYAMLRequest
+
+	fmt.Println("🔍 Preparing AI enhancement requests...")
 	for fi := range result.Files {
-		for pi := range result.Files[fi].Packages {
-			pkg := &result.Files[fi].Packages[pi]
-			lang := getLanguage(result.Files[fi].Path)
+		file := result.Files[fi]
+		fmt.Printf("📦 File: %s\n", file.Path)
+
+		for pi := range file.Packages {
+			pkg := &file.Packages[pi]
+			lang := getLanguage(file.Path)
+			fmt.Printf("  📚 Package: %s (Lang: %s)\n", pkg.Name, lang)
 
 			for si := range pkg.Structs {
-				if cfg.AIClient != nil {
+				if cfg.AIClient == nil {
+					continue
+				}
+
+				if lang == "YAML" {
+					input := formatYAMLStruct(pkg.Structs[si])
+					pkg.Structs[si].DocYAML = aiTypes.YAMLDocumentation{}
+					yamlRequests = append(yamlRequests, AIYAMLRequest{
+						Input:    input,
+						Language: lang,
+						Target:   &pkg.Structs[si].DocYAML,
+					})
+					fmt.Printf("    📄 YAML Struct: %s → YAML AI request added\n", pkg.Structs[si].Name)
+				} else {
 					input := formatStruct(pkg.Structs[si])
-					pkg.Structs[si].Doc = ai.Documentation{}
-					aiRequests = append(aiRequests, AIRequest{
+					pkg.Structs[si].Doc = aiTypes.Documentation{}
+					codeRequests = append(codeRequests, AICodeRequest{
 						Input:    input,
 						Language: lang,
 						Target:   &pkg.Structs[si].Doc,
 					})
+					fmt.Printf("    🧩 Struct: %s → Code AI request added\n", pkg.Structs[si].Name)
 				}
 			}
-			for fi := range pkg.Funcs {
-				if cfg.AIClient != nil {
-					input := formatFunction(pkg.Funcs[fi])
-					pkg.Funcs[fi].Doc = ai.Documentation{}
-					aiRequests = append(aiRequests, AIRequest{
-						Input:    input,
-						Language: lang,
-						Target:   &pkg.Funcs[fi].Doc,
-					})
+
+			if lang != "YAML" {
+				for fi := range pkg.Funcs {
+					if cfg.AIClient != nil {
+						input := formatFunction(pkg.Funcs[fi])
+						pkg.Funcs[fi].Doc = aiTypes.Documentation{}
+						codeRequests = append(codeRequests, AICodeRequest{
+							Input:    input,
+							Language: lang,
+							Target:   &pkg.Funcs[fi].Doc,
+						})
+						fmt.Printf("    🔧 Function: %s → Code AI request added\n", pkg.Funcs[fi].Name)
+					}
+
 				}
 			}
 		}
 	}
 
-	if cfg.AIClient != nil && len(aiRequests) > 0 {
-		fmt.Printf("🚀 Sending %d documentation enhancements to AI\n", len(aiRequests))
-		processAIRequests(aiRequests, cfg.AIClient)
+	// Process requests separately
+	if cfg.AIClient != nil {
+		if len(codeRequests) > 0 || len(yamlRequests) > 0 {
+			fmt.Printf("🚀 Sending %d code + %d YAML requests to AI\n", len(codeRequests), len(yamlRequests))
+			processAIRequests(codeRequests, yamlRequests, cfg.AIClient)
+			fmt.Println("✅ AI enhancement complete.")
+		}
 	}
 
-	// Generate package documentation
+	fmt.Println("📝 Generating documentation output...")
+
+	// Generate final docs
 	for _, file := range result.Files {
 		for _, pkg := range file.Packages {
-			if err := generatePackageDoc(pkg, file.Path, cfg); err != nil {
-				return fmt.Errorf("failed to generate docs for package %s: %w", pkg.Name, err)
+			if getLanguage(file.Path) == "YAML" {
+				fmt.Printf("📄 Generating YAML documentation for: %s\n", pkg.Name)
+				if err := generateYAMLDoc(pkg, file.Path, cfg); err != nil {
+					return fmt.Errorf("failed to generate YAML docs for package %s: %w", pkg.Name, err)
+				}
+			} else {
+				fmt.Printf("📄 Generating code documentation for: %s\n", pkg.Name)
+				if err := generatePackageDoc(pkg, file.Path, cfg); err != nil {
+					return fmt.Errorf("failed to generate docs for package %s: %w", pkg.Name, err)
+				}
 			}
 		}
 	}
 
+	fmt.Println("✅ All documentation successfully generated.")
 	return nil
+}
+
+func generateYAMLDoc(pkg analyzer.Package, filePath string, cfg GeneratorConfig) error {
+	pkgDir := filepath.Join(cfg.OutputDir, pkg.Name)
+	if err := os.MkdirAll(pkgDir, 0755); err != nil {
+		return fmt.Errorf("failed to create package directory: %w", err)
+	}
+
+	readmePath := filepath.Join(pkgDir, "README.md")
+
+	var existingContent []byte
+	if _, err := os.Stat(readmePath); err == nil {
+		existingContent, _ = os.ReadFile(readmePath)
+	}
+
+	var b strings.Builder
+
+	// Header
+	if len(existingContent) > 0 {
+		b.Write(existingContent)
+		b.WriteString("\n---\n\n")
+	} else {
+		b.WriteString(fmt.Sprintf("# 📄 YAML Configuration: `%s`\n\n", pkg.Name))
+		b.WriteString("[← Back to Overview](../README.md)\n\n")
+	}
+
+	b.WriteString(fmt.Sprintf("## 📄 File: `%s`\n\n", filepath.Base(filePath)))
+	b.WriteString(fmt.Sprintf("> 📍 Path: `%s`\n\n", getDisplayPath(filePath)))
+
+	for _, s := range pkg.Structs {
+		doc := s.DocYAML
+
+		// Expandable Resource Summary
+		if doc.Summary != "" {
+			b.WriteString("<details>\n")
+			b.WriteString("<summary>🚀 Resource Summary</summary>\n\n")
+			b.WriteString(fmt.Sprintf("- **Kind:** `%s`\n", s.Name))
+			b.WriteString(fmt.Sprintf("- **Description:** %s\n\n", doc.Summary))
+			b.WriteString("</details>\n\n")
+		}
+
+		// Expandable Configuration Example
+		if len(s.Fields) > 0 {
+			b.WriteString("<details>\n")
+			b.WriteString(fmt.Sprintf("<summary>⚙️ Configuration Example for `%s`</summary>\n\n", s.Name))
+			b.WriteString("```yaml\n")
+			b.WriteString(generateYAMLExample(s.Fields, 0))
+			b.WriteString("```\n")
+			b.WriteString("</details>\n\n")
+		}
+
+		// Expandable Field Reference (each field in its own collapsible)
+		if len(doc.Fields) > 0 {
+			b.WriteString("<details>\n")
+			b.WriteString("<summary>📑 Field Reference</summary>\n\n")
+			for _, f := range doc.Fields {
+				b.WriteString("<details>\n")
+				b.WriteString(fmt.Sprintf("<summary>`%s`</summary>\n\n", f.Name))
+				b.WriteString(fmt.Sprintf("- **Type:** `%s`\n", f.Type))
+				if f.Description != "" {
+					b.WriteString(fmt.Sprintf("- **Description:** %s\n", f.Description))
+				}
+				b.WriteString("</details>\n\n")
+			}
+			b.WriteString("</details>\n\n")
+		}
+
+		// Expandable Examples
+		if len(doc.Examples) > 0 {
+			b.WriteString("<details>\n")
+			b.WriteString("<summary>🔍 Examples</summary>\n\n```yaml\n")
+			for key, val := range doc.Examples {
+				b.WriteString(fmt.Sprintf("%s: %v\n", key, val))
+			}
+			b.WriteString("```\n")
+			b.WriteString("</details>\n\n")
+		}
+
+		// Expandable Defaults
+		if len(doc.Defaults) > 0 {
+			b.WriteString("<details>\n")
+			b.WriteString("<summary>🌐 Defaults</summary>\n\n")
+			for key, val := range doc.Defaults {
+				b.WriteString(fmt.Sprintf("- **%s**: `%v`\n", key, val))
+			}
+			b.WriteString("</details>\n\n")
+		}
+
+		// Expandable Usage
+		if doc.Usage != "" {
+			b.WriteString("<details>\n")
+			b.WriteString("<summary>🧰 Usage</summary>\n\n")
+			b.WriteString(doc.Usage + "\n")
+			b.WriteString("</details>\n\n")
+		}
+
+		// Expandable Edge Cases
+		if len(doc.BestPractices) > 0 {
+			b.WriteString("<details>\n")
+			b.WriteString("<summary>⚠️ Edge Cases</summary>\n\n")
+			for _, ec := range doc.BestPractices {
+				b.WriteString(fmt.Sprintf("- %s\n", ec))
+			}
+			b.WriteString("</details>\n\n")
+		}
+	}
+
+	return os.WriteFile(readmePath, []byte(b.String()), 0644)
+}
+
+func generateYAMLExample(fields []analyzer.Field, indentLevel int) string {
+	var b strings.Builder
+	indent := strings.Repeat("  ", indentLevel)
+
+	for _, f := range fields {
+		fieldName := f.Name
+		fieldVal := f.Value
+
+		switch f.Type {
+		case "array":
+			b.WriteString(fmt.Sprintf("%s%s:\n", indent, fieldName))
+			for _, item := range f.Fields {
+				innerIndent := strings.Repeat("  ", indentLevel+1)
+				b.WriteString(innerIndent + "- ")
+				if len(item.Fields) > 0 {
+					first := item.Fields[0]
+					b.WriteString(fmt.Sprintf("%s: %s\n", first.Name, first.Value))
+					for _, sub := range item.Fields[1:] {
+						b.WriteString(fmt.Sprintf("%s  %s: %s\n", innerIndent, sub.Name, sub.Value))
+					}
+				} else {
+					b.WriteString(item.Value + "\n")
+				}
+			}
+
+		case "map":
+			b.WriteString(fmt.Sprintf("%s%s:\n", indent, fieldName))
+			b.WriteString(generateYAMLExample(f.Fields, indentLevel+1))
+
+		default:
+			if fieldVal != "" {
+				b.WriteString(fmt.Sprintf("%s%s: %s\n", indent, fieldName, fieldVal))
+			} else {
+				b.WriteString(fmt.Sprintf("%s%s: # TODO: Add value\n", indent, fieldName))
+			}
+		}
+	}
+
+	return b.String()
+}
+
+// Helper to clean up empty markdown cells
+func safeMarkdown(s string) string {
+	if s == "" {
+		return "N/A"
+	}
+	return s
+}
+
+func isServiceFile(pkg analyzer.Package) bool {
+	for _, s := range pkg.Structs {
+		if strings.ToLower(s.Name) == "service" {
+			return true
+		}
+	}
+	return false
+}
+
+// Helper to check if this is a Kubernetes YAML file
+func isKubernetesFile(pkg analyzer.Package) bool {
+	for _, s := range pkg.Structs {
+		if strings.Contains(s.Doc.Summary, "Kubernetes") {
+			return true
+		}
+	}
+	return false
+}
+
+// New function to format YAML structs for AI processing
+func formatYAMLStruct(s analyzer.Struct) string {
+	var b strings.Builder
+	b.WriteString(fmt.Sprintf("YAML Configuration Structure: %s\n", s.Name))
+	if s.Doc.Summary != "" {
+		b.WriteString(fmt.Sprintf("Description: %s\n", s.Doc.Summary))
+	}
+	b.WriteString("Fields:\n")
+
+	for _, f := range s.Fields {
+		b.WriteString(fmt.Sprintf("- %s (%s)", f.Name, f.Type))
+		if f.Value != "" {
+			b.WriteString(fmt.Sprintf(" = %s", f.Value))
+		}
+		b.WriteString("\n")
+
+		if len(f.Fields) > 0 {
+			b.WriteString(formatYAMLFields(f.Fields, 1))
+		}
+	}
+
+	return b.String()
+}
+
+// Helper for recursive field formatting
+func formatYAMLFields(fields []analyzer.Field, depth int) string {
+	var b strings.Builder
+	indent := strings.Repeat("  ", depth)
+
+	for _, f := range fields {
+		b.WriteString(indent + fmt.Sprintf("- %s (%s)", f.Name, f.Type))
+		if f.Value != "" {
+			b.WriteString(fmt.Sprintf(" = %s", f.Value))
+		}
+		b.WriteString("\n")
+
+		if len(f.Fields) > 0 {
+			b.WriteString(formatYAMLFields(f.Fields, depth+1))
+		}
+	}
+
+	return b.String()
 }
 
 func generateProjectReadme(result *analyzer.AnalyzerResult, cfg GeneratorConfig) error {
@@ -268,25 +536,52 @@ func calculateDocCompletion(pkg analyzer.Package) int {
 }
 
 // processAIRequests assigns Documentation results to targets
-func processAIRequests(requests []AIRequest, client *ai.Client) {
+func processAIRequests(
+	codeRequests []AICodeRequest,
+	yamlRequests []AIYAMLRequest,
+	client *ai.Client,
+) {
 	ctx := context.Background()
 
-	inputs := make([]string, len(requests))
-	languages := make([]string, len(requests))
-	for i, req := range requests {
-		inputs[i] = req.Input
-		languages[i] = req.Language
+	// Process code requests
+	if len(codeRequests) > 0 {
+		inputs := make([]string, len(codeRequests))
+		languages := make([]string, len(codeRequests))
+		for i, req := range codeRequests {
+			inputs[i] = req.Input
+			languages[i] = req.Language
+		}
+
+		results, err := client.EnhanceDocumentationBatch(ctx, inputs, languages)
+		if err != nil {
+			fmt.Printf("⚠️ Code enhancement failed: %v\n", err)
+		} else {
+			for i, res := range results {
+				if codeRequests[i].Target != nil {
+					*codeRequests[i].Target = res
+				}
+			}
+		}
 	}
 
-	results, err := client.EnhanceDocumentationBatch(ctx, inputs, languages)
-	if err != nil {
-		fmt.Printf("⚠️ AI batch enhancement failed: %v\n", err)
-		return
-	}
+	// Process YAML requests
+	if len(yamlRequests) > 0 {
+		inputs := make([]string, len(yamlRequests))
+		languages := make([]string, len(yamlRequests))
+		for i, req := range yamlRequests {
+			inputs[i] = req.Input
+			languages[i] = req.Language
+		}
 
-	for i, res := range results {
-		if requests[i].Target != nil {
-			*requests[i].Target = res
+		results, err := client.EnhanceYAMLDocumentationBatch(ctx, inputs, languages)
+		if err != nil {
+			fmt.Printf("⚠️ YAML enhancement failed: %v\n", err)
+		} else {
+			for i, res := range results {
+				if yamlRequests[i].Target != nil {
+					*yamlRequests[i].Target = res
+				}
+			}
 		}
 	}
 }
@@ -325,7 +620,7 @@ func formatFunction(f analyzer.Function) string {
 }
 
 // formatDocumentation formats a full Documentation struct to Markdown
-func formatDocumentation(doc ai.Documentation) string {
+func formatDocumentation(doc aiTypes.Documentation) string {
 	if doc.Summary == "" {
 		return "_No documentation available._\n"
 	}
