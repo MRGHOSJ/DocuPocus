@@ -164,35 +164,39 @@ func (y *YAMLAnalyzer) analyzeKubernetesResource(node *yaml.Node, baseName strin
 func (y *YAMLAnalyzer) extractKubernetesSpec(node *yaml.Node) []Field {
 	var fields []Field
 
-	// Extract fields at the root level
-	if node.Kind == yaml.MappingNode {
-		for i := 0; i < len(node.Content); i += 2 {
-			if i+1 >= len(node.Content) {
-				continue
-			}
-			keyNode := node.Content[i]
-			valueNode := node.Content[i+1]
+	if node.Kind != yaml.MappingNode {
+		return fields
+	}
 
-			// // Skip known non-config sections
-			// if keyNode.Value == "apiVersion" || keyNode.Value == "kind" || keyNode.Value == "metadata" {
-			// 	continue
-			// }
-
-			field := Field{
-				Name:    keyNode.Value,
-				Type:    y.nodeKindToString(valueNode.Kind),
-				DocYAML: ai.YAMLDocumentation{Summary: strings.TrimSpace(keyNode.HeadComment + "\n" + keyNode.LineComment)},
-			}
-
-			if valueNode.Kind == yaml.ScalarNode {
-				field.Value = valueNode.Value
-			}
-			if valueNode.Kind == yaml.MappingNode || valueNode.Kind == yaml.SequenceNode {
-				field.Fields = y.extractYAMLFields(valueNode, 1)
-			}
-
-			fields = append(fields, field)
+	for i := 0; i < len(node.Content); i += 2 {
+		if i+1 >= len(node.Content) {
+			continue
 		}
+		keyNode := node.Content[i]
+		valueNode := node.Content[i+1]
+
+		name := keyNode.Value
+		field := Field{
+			Name: name,
+			Type: y.nodeKindToString(valueNode.Kind),
+			DocYAML: ai.YAMLDocumentation{
+				Summary: strings.TrimSpace(keyNode.HeadComment + " " + keyNode.LineComment),
+			},
+		}
+
+		switch valueNode.Kind {
+		case yaml.ScalarNode:
+			field.Value = valueNode.Value
+
+		case yaml.MappingNode:
+			field.Fields = y.extractYAMLFields(valueNode, 1)
+
+		case yaml.SequenceNode:
+			field.Type = "array"
+			field.Fields = y.extractArrayItems(valueNode)
+		}
+
+		fields = append(fields, field)
 	}
 
 	return fields
@@ -394,6 +398,27 @@ func (y *YAMLAnalyzer) getValueNode(node *yaml.Node, key string) *yaml.Node {
 }
 
 // -- Core Analysis Helpers --
+
+func (y *YAMLAnalyzer) extractArrayItems(node *yaml.Node) []Field {
+	var items []Field
+
+	for _, item := range node.Content {
+		itemField := Field{
+			Type: y.nodeKindToString(item.Kind),
+		}
+
+		switch item.Kind {
+		case yaml.MappingNode:
+			itemField.Fields = y.extractYAMLFields(item, 2)
+		case yaml.ScalarNode:
+			itemField.Value = item.Value
+		}
+
+		items = append(items, itemField)
+	}
+
+	return items
+}
 
 func (y *YAMLAnalyzer) extractYAMLFields(node *yaml.Node, depth int) []Field {
 	var fields []Field

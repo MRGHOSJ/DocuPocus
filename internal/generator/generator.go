@@ -171,11 +171,9 @@ func generateYAMLDoc(pkg analyzer.Package, filePath string, cfg GeneratorConfig)
 
 		// Expandable Resource Summary
 		if doc.Summary != "" {
-			b.WriteString("<details>\n")
-			b.WriteString("<summary>🚀 Resource Summary</summary>\n\n")
+			b.WriteString("🚀 Resource Summary\n\n")
 			b.WriteString(fmt.Sprintf("- **Kind:** `%s`\n", s.Name))
 			b.WriteString(fmt.Sprintf("- **Description:** %s\n\n", doc.Summary))
-			b.WriteString("</details>\n\n")
 		}
 
 		// Expandable Configuration Example
