@@ -61,17 +61,17 @@ runs:
 
         PREVIEW_BRANCH="docupocus-preview"
 
-        # ✅ STEP 1: Preserve docs before branch switch
+        # ✅ STEP 1: Preserve docs before orphan branch switch
         if [ -d "docs" ] && [ "$(ls -A docs)" ]; then
           echo "📁 Saving generated docs..."
           mkdir -p preserved-docs
-          cp -r docs/* preserved-docs/
+          rsync -av docs/ preserved-docs/
         else
           echo "❌ 'docs/' folder not found or is empty. Aborting."
           exit 1
         fi
 
-        # ✅ STEP 2: Switch to orphan branch and clean
+        # ✅ STEP 2: Create orphan branch
         git fetch origin
         git checkout --orphan "$PREVIEW_BRANCH"
         git reset --hard
@@ -79,7 +79,7 @@ runs:
 
         # ✅ STEP 3: Restore docs
         mkdir -p docs
-        cp -r preserved-docs/* docs/
+        rsync -av preserved-docs/ docs/
         rm -rf preserved-docs
 
         # ✅ STEP 4: Commit and push
