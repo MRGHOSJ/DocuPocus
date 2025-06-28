@@ -61,23 +61,29 @@ runs:
 
         PREVIEW_BRANCH="docupocus-preview"
 
-        # Save generated docs before switching branches
-        mkdir temp-docs
-        cp -r docs/* temp-docs/
+        # ✅ STEP 1: Preserve docs before branch switch
+        if [ -d "docs" ] && [ "$(ls -A docs)" ]; then
+          echo "📁 Saving generated docs..."
+          mkdir -p preserved-docs
+          cp -r docs/* preserved-docs/
+        else
+          echo "❌ 'docs/' folder not found or is empty. Aborting."
+          exit 1
+        fi
 
-        # Create new orphan branch
+        # ✅ STEP 2: Switch to orphan branch and clean
         git fetch origin
-        git checkout --orphan $PREVIEW_BRANCH
+        git checkout --orphan "$PREVIEW_BRANCH"
         git reset --hard
         rm -rf * .github .gitignore || true
 
-        # Restore docs into new branch
+        # ✅ STEP 3: Restore docs
         mkdir -p docs
-        cp -r temp-docs/* docs/
-        rm -rf temp-docs
+        cp -r preserved-docs/* docs/
+        rm -rf preserved-docs
 
-        touch .nojekyll  # Allow GitHub Pages to serve files from /docs
-
+        # ✅ STEP 4: Commit and push
+        touch .nojekyll
         git add docs/
         git commit -m "📝 Docupocus preview"
-        git push -f origin $PREVIEW_BRANCH
+        git push -f origin "$PREVIEW_BRANCH"
