@@ -60,27 +60,27 @@ runs:
         git config --global user.name "GitHub Actions"
 
         PREVIEW_BRANCH="docupocus-preview"
+        TEMP_DIR="/tmp/preserved-docs"
 
-        # ✅ STEP 1: Preserve docs before orphan branch switch
+        # ✅ STEP 1: Preserve docs outside repo
         if [ -d "docs" ] && [ "$(ls -A docs)" ]; then
-          echo "📁 Saving generated docs..."
-          mkdir -p preserved-docs
-          rsync -av docs/ preserved-docs/
+          echo "📁 Saving generated docs to $TEMP_DIR"
+          mkdir -p "$TEMP_DIR"
+          rsync -av docs/ "$TEMP_DIR/"
         else
           echo "❌ 'docs/' folder not found or is empty. Aborting."
           exit 1
         fi
 
-        # ✅ STEP 2: Create orphan branch
+        # ✅ STEP 2: Create orphan branch and wipe repo
         git fetch origin
         git checkout --orphan "$PREVIEW_BRANCH"
         git reset --hard
         rm -rf * .github .gitignore || true
 
-        # ✅ STEP 3: Restore docs
+        # ✅ STEP 3: Restore docs from outside temp dir
         mkdir -p docs
-        rsync -av preserved-docs/ docs/
-        rm -rf preserved-docs
+        rsync -av "$TEMP_DIR/" docs/
 
         # ✅ STEP 4: Commit and push
         touch .nojekyll
