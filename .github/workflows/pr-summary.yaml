@@ -47,13 +47,20 @@ jobs:
 
       - name: 💬 Post PR Summary as comment
         uses: actions/github-script@v6
+        env:
+          SUMMARY: ${{ steps.generate_summary.outputs.summary }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const summary = `### 🤖 Automated PR Summary\n\n${{ steps.generate_summary.outputs.summary }}`;
+            const summary = process.env.SUMMARY;
+            if (!summary || summary.trim() === "") {
+              console.log("No summary to post.");
+              return;
+            }
+
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: summary
+              body: `### 🤖 Automated PR Summary\n\n${summary}`
             });
