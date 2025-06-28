@@ -1,0 +1,31 @@
+name: Generate Docs
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+  workflow_dispatch:
+
+jobs:
+  generate-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - name: Build Docupocus
+        run: go build -o docupocus .
+
+      - name: Generate Docs
+        uses: ./.github/actions/docupocus
+        with:
+          ai-api-key: ${{ secrets.OPENROUTER_API_KEY }}
+
+      - name: Upload Documentation Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentation
+          path: docs/

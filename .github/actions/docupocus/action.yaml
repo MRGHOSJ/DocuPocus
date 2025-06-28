@@ -1,0 +1,27 @@
+name: Generate Documentation with Docupocus
+description: Analyzes code and generates documentation using AI
+
+inputs:
+  ai-api-key:
+    description: API key for OpenRouter or Ollama
+    required: true
+
+  ai-backend:
+    description: Backend type (openrouter or ollama)
+    default: openrouter
+
+  ai-model:
+    description: AI model to use
+    default: deepseek/deepseek-chat-v3-0324:free
+
+runs:
+  using: "composite"
+  steps:
+    - run: |
+        ./docupocus \
+          --non-interactive true \
+          --ai-api-key ${{ inputs.ai-api-key }} \
+          --ai-backend ${{ inputs.ai-backend }} \
+          --ai-model ${{ inputs.ai-model }} \
+          --verbose
+      shell: bash

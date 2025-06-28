@@ -4,109 +4,63 @@ import (
 	"fmt"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 )
 
-var (
-	titleStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#FAFAFA")).
-			Background(lipgloss.Color("#7D56F4")).
-			Padding(0, 1)
-	questionStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#04B575"))
-	inputStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("#7D56F4"))
-)
-
-type model struct {
-	step       int
-	projectDir string
-	template   string
-	aiEnabled  bool
-	inputs     []string
-	cursor     int
-}
-
-func initialModel() model {
-	return model{
-		inputs: make([]string, 3),
-	}
-}
-
-func (m model) Init() tea.Cmd {
+func (m Model) Init() tea.Cmd {
 	return nil
 }
 
-func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch msg.String() {
-		case "ctrl+c":
-			return m, tea.Quit
-		case "enter":
-			if m.step < 2 {
-				m.step++
-			} else {
-				// Start documentation generation
-				return m, tea.Quit
-			}
-		case "up":
-			if m.cursor > 0 {
-				m.cursor--
-			}
-		case "down":
-			if m.cursor < 2 {
-				m.cursor++
-			}
-		default:
-			// Handle text input
-			if m.step == 0 {
-				m.projectDir += msg.String()
-			}
+		switch m.step {
+		case 0:
+			return stepProjectDir(m, msg)
+		case 1:
+			return stepAIBackend(m, msg)
+		case 2:
+			return stepAIModel(m, msg)
+		case 3:
+			return stepAIEndpoint(m, msg)
+		case 4:
+			return stepAPIKey(m, msg)
+		case 5:
+			return stepOutputFolder(m, msg)
 		}
 	}
 	return m, nil
 }
 
-func (m model) View() string {
-	s := titleStyle.Render("📄 DocuGen - Interactive Documentation Generator") + "\n\n"
-
+func (m Model) View() string {
+	header := TitleStyle.Render("📄 DocuGen - Interactive Documentation Generator") + "\n\n"
 	switch m.step {
 	case 0:
-		s += questionStyle.Render("1. Project Path :") + "\n"
-		s += inputStyle.Render(m.projectDir) + "|" + "\n\n"
-		s += "  ↑/↓: Navigate • Enter: Confirm • Ctrl+C: Quit"
-
+		return header + viewProjectDir(m)
 	case 1:
-		s += questionStyle.Render("2. Select Template:") + "\n"
-		options := []string{"Default", "Modern", "Minimal"}
-		for i, option := range options {
-			cursor := " "
-			if m.cursor == i {
-				cursor = ">"
-			}
-			s += fmt.Sprintf("%s %s\n", cursor, option)
-		}
-		s += "\n  ↑/↓: Navigate • Enter: Select • Ctrl+C: Quit"
-
+		return header + viewAIBackend(m)
 	case 2:
-		s += questionStyle.Render("3. AI Enhancement:") + "\n"
-		options := []string{"Enable AI (Recommended)", "Disable AI"}
-		for i, option := range options {
-			cursor := " "
-			if m.cursor == i {
-				cursor = ">"
-			}
-			s += fmt.Sprintf("%s %s\n", cursor, option)
-		}
-		s += "\n\n" + "  ↑/↓: Navigate • Enter: Generate • Ctrl+C: Quit"
+		return header + viewAIModel(m)
+	case 3:
+		return header + viewAIEndpoint(m)
+	case 4:
+		return header + viewAPIKey(m)
+	case 5:
+		return header + viewOutputFolder(m)
+	default:
+		return header + "Unknown step"
 	}
-
-	return s
 }
 
-func StartWizard() error {
+func StartWizard() (Model, error) {
 	p := tea.NewProgram(initialModel())
-	if _, err := p.Run(); err != nil {
-		return err
+	finalModel, err := p.Run()
+	if err != nil {
+		return Model{}, err
 	}
-	return nil
+
+	m, ok := finalModel.(Model)
+	if !ok {
+		return Model{}, fmt.Errorf("failed to cast final Model")
+	}
+	return m, nil
 }
