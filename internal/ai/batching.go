@@ -3,6 +3,7 @@ package ai
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -185,6 +186,19 @@ func (c *Client) callBatchAPI(ctx context.Context, inputs, languages []string, i
 	c.logger.Info("Raw batch API response: %s", response)
 
 	return c.parseBatchResponse(response, len(prompts))
+}
+
+func (c *Client) CallSummaryAPI(ctx context.Context, diff string) (string, error) {
+	prompt := c.buildSummaryPrompt(diff)
+
+	response, err := c.backend.Call(ctx, prompt)
+	if err != nil {
+		return "", err
+	}
+
+	c.logger.Info("Raw summary API response: %s", response)
+
+	return strings.TrimSpace(response), nil
 }
 
 func (c *Client) callBatchYamlAPI(ctx context.Context, inputs, languages []string, indices []int) ([]docType.YAMLDocumentation, error) {

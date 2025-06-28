@@ -110,3 +110,22 @@ func (c *Client) buildBatchPromptCodeAssistant(prompts []string) string {
 
 	return sb.String()
 }
+
+func (c *Client) buildSummaryPrompt(diff string) string {
+	var sb strings.Builder
+
+	sb.WriteString("You are an expert code reviewer and documentation summarizer.\n\n")
+	sb.WriteString("Analyze the following Git diff and summarize **what changed**, including:\n")
+	sb.WriteString("- Changed files and their purpose\n")
+	sb.WriteString("- Types of changes (e.g. bug fix, feature addition, refactor)\n")
+	sb.WriteString("- Any critical impacts or highlights\n")
+	sb.WriteString("- Mention any added/removed functions, structs, or components\n\n")
+	sb.WriteString("Keep the summary clear and under 200 words. Use markdown bullet points where helpful.\n\n")
+
+	sb.WriteString("Git diff:\n")
+	sb.WriteString("```\n")
+	sb.WriteString(diff)
+	sb.WriteString("\n```\n")
+
+	return sb.String()
+}

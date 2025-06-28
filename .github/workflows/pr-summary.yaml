@@ -1,0 +1,49 @@
+name: Generate PR Summary
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: write   # Needed to post PR comments
+
+jobs:
+  pr-summary:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - name: Build Docupocus CLI
+        run: go build -o docupocus ./cmd/docupocus/
+
+      - name: Generate PR Summary
+        id: generate_summary
+        run: |
+          raw_summary=$(./docupocus --non-interactive --summary --base-branch main)
+
+          # Extract only the actual summary, removing logs and prefixes
+          filtered_summary=$(echo "$raw_summary" | sed -n '/Raw summary API response:/,$p' | sed '1d')
+          filtered_summary=$(echo "$filtered_summary" | sed '/^\s*$/d')
+
+          echo "summary<<EOF" >> $GITHUB_OUTPUT
+          echo "$filtered_summary" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Post PR Summary Comment
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const summary = `### 🤖 Automated PR Summary\n\n${{ steps.generate_summary.outputs.summary }}`
+            github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: context.issue.number,
+              body: summary
+            })

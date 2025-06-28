@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -32,6 +34,8 @@ func run() error {
 	aiEndpointFlag := flag.String("ai-endpoint", "", "Custom AI endpoint URL")
 	aiAPIKeyFlag := flag.String("ai-api-key", "", "API key for OpenRouter")
 	outputFolderFlag := flag.String("output", "docs", "Output file path")
+	generateSummaryFlag := flag.Bool("summary", false, "Generate a PR change summary")
+	baseBranchFlag := flag.String("base-branch", "main", "Base branch to compare against")
 	verboseFlag := flag.Bool("verbose", true, "Enable verbose logging")
 
 	flag.Parse()
@@ -43,6 +47,8 @@ func run() error {
 	aiAPIKey := *aiAPIKeyFlag
 	outputFolder := *outputFolderFlag
 	verbose := *verboseFlag
+	generateSummary := *generateSummaryFlag
+	baseBranch := *baseBranchFlag
 
 	// If interactive, run wizard to get values instead of flags
 	if !*nonInteractive {
@@ -90,6 +96,16 @@ func run() error {
 	aiClient, err := setupAIClient(aiBackend, aiModel, aiEndpoint, aiAPIKey, verbose)
 	if err != nil {
 		return fmt.Errorf("AI setup failed: %w", err)
+	}
+
+	if generateSummary {
+		if verbose {
+			fmt.Println("🧠 Generating pull request summary...")
+		}
+		if err := generatePRSummary(absProjectDir, baseBranch, aiClient); err != nil {
+			return fmt.Errorf("failed to generate PR summary: %w", err)
+		}
+		return nil
 	}
 
 	// Generate docs
@@ -216,6 +232,70 @@ func generateDocs(projectDir, outputFolder string, aiClient *ai.Client, verbose 
 	if verbose {
 		fmt.Printf("✅ Documentation generated successfully\n")
 	}
+
+	return nil
+}
+
+func getAllDiff(projectDir, baseBranch string) (string, error) {
+	// Fetch base branch first
+	cmdFetch := exec.Command("git", "fetch", "origin", baseBranch)
+	cmdFetch.Dir = projectDir
+	if err := cmdFetch.Run(); err != nil {
+		return "", fmt.Errorf("failed to fetch base branch: %w", err)
+	}
+
+	// Diff committed changes against base branch
+	cmdDiffCommitted := exec.Command("git", "diff", fmt.Sprintf("origin/%s...HEAD", baseBranch))
+	cmdDiffCommitted.Dir = projectDir
+	committedDiff, err := cmdDiffCommitted.Output()
+	if err != nil {
+		return "", fmt.Errorf("git diff committed failed: %w", err)
+	}
+
+	// Diff staged but uncommitted changes
+	cmdDiffStaged := exec.Command("git", "diff", "--cached")
+	cmdDiffStaged.Dir = projectDir
+	stagedDiff, err := cmdDiffStaged.Output()
+	if err != nil {
+		return "", fmt.Errorf("git diff staged failed: %w", err)
+	}
+
+	// Diff unstaged changes
+	cmdDiffUnstaged := exec.Command("git", "diff")
+	cmdDiffUnstaged.Dir = projectDir
+	unstagedDiff, err := cmdDiffUnstaged.Output()
+	if err != nil {
+		return "", fmt.Errorf("git diff unstaged failed: %w", err)
+	}
+
+	// Combine all diffs
+	fullDiff := string(committedDiff) + "\n" + string(stagedDiff) + "\n" + string(unstagedDiff)
+	return fullDiff, nil
+}
+
+func generatePRSummary(projectDir, baseBranch string, aiClient *ai.Client) error {
+	// Get the full diff string using your helper
+	diff, err := getAllDiff(projectDir, baseBranch)
+	if err != nil {
+		return fmt.Errorf("failed to get diff: %w", err)
+	}
+
+	if diff == "" {
+		fmt.Println("✅ No changes detected.")
+		return nil
+	}
+
+	fmt.Println("🔍 Files and changes in this PR:\n", diff)
+
+	// Call AI summary API with diff content
+	ctx := context.Background()
+	summary, err := aiClient.CallSummaryAPI(ctx, diff)
+	if err != nil {
+		return fmt.Errorf("failed to generate AI summary: %w", err)
+	}
+
+	fmt.Println("\n📋 **PR Summary Preview:**")
+	fmt.Println(summary)
 
 	return nil
 }
