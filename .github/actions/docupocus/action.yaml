@@ -3,8 +3,8 @@ description: Analyzes code and generates documentation using AI
 
 inputs:
   ai-api-key:
-    description: API key for OpenRouter or Ollama
-    required: true
+    description: API key for OpenRouter
+    required: false
 
   ai-backend:
     description: Backend type (openrouter or ollama)
@@ -14,19 +14,36 @@ inputs:
     description: AI model to use
     default: deepseek/deepseek-chat-v3-0324:free
 
+  ai-endpoint:
+    description: Endpoint for Ollama backend (e.g., http://localhost:11434)
+    required: false
+
 runs:
   using: "composite"
   steps:
     - name: 📄 Generate Documentation
-      run: |
-        ./docupocus \
-          --non-interactive \
-          --ai-api-key "${{ inputs.ai-api-key }}" \
-          --ai-backend "${{ inputs.ai-backend }}" \
-          --ai-model "${{ inputs.ai-model }}" \
-          --output docs \
-          --verbose
       shell: bash
+      run: |
+        set -e
+
+        CMD="./docupocus \
+          --non-interactive \
+          --ai-backend \"${{ inputs.ai-backend }}\" \
+          --ai-model \"${{ inputs.ai-model }}\" \
+          --output docs \
+          --verbose"
+
+        if [[ "${{ inputs.ai-backend }}" == "openrouter" ]]; then
+          CMD="$CMD --ai-api-key \"${{ inputs.ai-api-key }}\""
+        elif [[ "${{ inputs.ai-backend }}" == "ollama" ]]; then
+          CMD="$CMD --ai-endpoint \"${{ inputs.ai-endpoint }}\""
+        else
+          echo "❌ Unsupported AI backend: ${{ inputs.ai-backend }}"
+          exit 1
+        fi
+
+        echo "📣 Running command: $CMD"
+        eval $CMD
 
     - name: 📦 Upload documentation artifact
       uses: actions/upload-artifact@v4
@@ -35,23 +52,20 @@ runs:
         path: docs/
 
     - name: 🚀 Push docs to preview branch
+      shell: bash
       run: |
         git config --global user.email "actions@github.com"
         git config --global user.name "GitHub Actions"
-        
+
         PREVIEW_BRANCH="docupocus-preview"
 
-        # Create orphan branch
         git checkout --orphan $PREVIEW_BRANCH
         git reset --hard
         rm -rf .github .gitignore * || true
 
-        # Copy docs
         mkdir -p docs
         cp -r ../docs/* ./docs/
 
-        # Commit and push
         git add docs/
         git commit -m "📝 Docupocus preview"
         git push -f origin $PREVIEW_BRANCH
-      shell: bash
