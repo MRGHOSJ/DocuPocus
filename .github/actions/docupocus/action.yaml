@@ -17,11 +17,41 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - run: |
+    - name: 📄 Generate Documentation
+      run: |
         ./docupocus \
-          --non-interactive true \
-          --ai-api-key ${{ inputs.ai-api-key }} \
-          --ai-backend ${{ inputs.ai-backend }} \
-          --ai-model ${{ inputs.ai-model }} \
+          --non-interactive \
+          --ai-api-key "${{ inputs.ai-api-key }}" \
+          --ai-backend "${{ inputs.ai-backend }}" \
+          --ai-model "${{ inputs.ai-model }}" \
+          --output docs \
           --verbose
+      shell: bash
+
+    - name: 📦 Upload documentation artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: docupocus-preview
+        path: docs/
+
+    - name: 🚀 Push docs to preview branch
+      run: |
+        git config --global user.email "actions@github.com"
+        git config --global user.name "GitHub Actions"
+        
+        PREVIEW_BRANCH="docupocus-preview"
+
+        # Create orphan branch
+        git checkout --orphan $PREVIEW_BRANCH
+        git reset --hard
+        rm -rf .github .gitignore * || true
+
+        # Copy docs
+        mkdir -p docs
+        cp -r ../docs/* ./docs/
+
+        # Commit and push
+        git add docs/
+        git commit -m "📝 Docupocus preview"
+        git push -f origin $PREVIEW_BRANCH
       shell: bash

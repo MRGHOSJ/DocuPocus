@@ -2072,3 +2072,503 @@ err := generateFinalDocs(analysisResults, config)
 
 </details>
 
+
+---
+
+## 📄 File: `ai_requests.go`
+
+> 📍 `generator\ai_requests.go`
+
+## 📑 Contents
+
+- [🔧 Functions (3)](#-functions)
+
+## 🔧 Functions
+
+<details>
+<summary><b><code>processAIRequests(codeRequests []cfg.AICodeRequest, yamlRequests []cfg.AIYAMLRequest, client *ai.Client)</code></b></summary>
+
+**Summary:** Configuration struct for code generation
+
+**Parameters:**
+- `AIClient` (*ai.Client): AI service client instance
+- `OutputDir` (string): Target directory for generated files
+- `Project` (Project): Project metadata (type details inferred)
+
+**Returns:** N/A (configuration struct)
+
+**Complexity:**
+- Time: N/A
+- Space: O(1) for struct allocation
+
+**Example:**
+```go
+config := GeneratorConfig{AIClient: client, OutputDir: "out"}
+```
+
+**Edge Cases:**
+- Nil AIClient causing runtime errors
+- Invalid OutputDir path
+- Incomplete Project struct fields
+
+
+</details>
+
+<details>
+<summary><b><code>formatYAMLStruct(s analyzer.Struct)</code></b></summary>
+
+**Summary:** Formats a YAML structure into a string
+
+**Parameters:**
+- `s` (analyzer.Struct): YAML structure to format
+
+**Returns:** Formatted YAML string
+
+**Complexity:**
+- Time: O(n) where n is structure size
+- Space: O(n) for output string
+
+**Example:**
+```go
+yamlStr := formatYAMLStruct(myStruct)
+```
+
+**Edge Cases:**
+- Empty input structure
+- Invalid YAML formatting rules
+- Nested structure depth limits
+
+
+</details>
+
+<details>
+<summary><b><code>formatYAMLFields(fields []analyzer.Field, depth int)</code></b></summary>
+
+**Summary:** Formats YAML fields with indentation based on depth
+
+**Parameters:**
+- `fields` ([]analyzer.Field): List of fields to format
+- `depth` (int): Indentation level
+
+**Returns:** Formatted YAML string representation of fields
+
+**Complexity:**
+- Time: O(n) where n is number of fields
+- Space: O(n) for output string storage
+
+**Example:**
+```go
+yaml := formatYAMLFields([]Field{{Name: "test"}}, 2)
+```
+
+**Edge Cases:**
+- Empty fields array
+- Negative depth values
+- Nested field structures
+
+
+</details>
+
+
+---
+
+## 📄 File: `generator.go`
+
+> 📍 `generator\generator.go`
+
+## 📑 Contents
+
+- [🔧 Functions (5)](#-functions)
+
+## 🔧 Functions
+
+<details>
+<summary><b><code>GeneratePackageDocs(result *analyzer.AnalyzerResult, cfg docTypes.GeneratorConfig)</code></b></summary>
+
+**Summary:** Returns field value or a placeholder if empty
+
+**Parameters:**
+- `f` (analyzer.Field): Field to check for value
+
+**Returns:** Field value as string or placeholder if empty
+
+**Complexity:**
+- Time: O(1)
+- Space: O(1)
+
+**Example:**
+```go
+val := getValueOrPlaceholder(field) // returns "N/A" if empty
+```
+
+**Edge Cases:**
+- Nil field input
+- Field with whitespace-only value
+
+
+</details>
+
+<details>
+<summary><b><code>prepareOutputStructure(result *analyzer.AnalyzerResult, cfg docTypes.GeneratorConfig)</code></b></summary>
+
+**Summary:** Prepares output structure from analyzer result using generator config
+
+**Parameters:**
+- `result` (*analyzer.AnalyzerResult): Analysis result to process
+- `cfg` (docTypes.GeneratorConfig): Configuration for output generation
+
+**Returns:** Error if preparation fails, nil otherwise
+
+**Complexity:**
+- Time: O(n) where n is size of result data
+- Space: O(n) for output structure allocation
+
+**Example:**
+```go
+err := prepareOutputStructure(&analysisResult, config)
+```
+
+**Edge Cases:**
+- Nil result pointer
+- Invalid config options
+- Large result data causing memory issues
+
+
+</details>
+
+<details>
+<summary><b><code>prepareAIRequests(result *analyzer.AnalyzerResult, cfg docTypes.GeneratorConfig)</code></b></summary>
+
+**Summary:** Creates AI request objects from analyzer result
+
+**Parameters:**
+- `result` (*analyzer.AnalyzerResult): Analysis result to convert
+- `cfg` (docTypes.GeneratorConfig): Configuration for request generation
+
+**Returns:** Two slices: AI code requests and AI YAML requests
+
+**Complexity:**
+- Time: O(n) where n is number of elements in result
+- Space: O(n) for request slices allocation
+
+**Example:**
+```go
+codeReqs, yamlReqs := prepareAIRequests(&analysisResult, config)
+```
+
+**Edge Cases:**
+- Empty result data
+- Configuration limiting request types
+- Memory constraints with large result sets
+
+
+</details>
+
+<details>
+<summary><b><code>enhanceWithAI(codeRequests []docTypes.AICodeRequest, yamlRequests []docTypes.AIYAMLRequest, cfg docTypes.GeneratorConfig)</code></b></summary>
+
+**Summary:** Enhances documentation using AI-generated content
+
+**Parameters:**
+- `codeRequests` ([]docTypes.AICodeRequest): Code documentation requests
+- `yamlRequests` ([]docTypes.AIYAMLRequest): YAML documentation requests
+- `cfg` (docTypes.GeneratorConfig): Configuration for enhancement process
+
+**Returns:** Error if enhancement fails, nil otherwise
+
+**Complexity:**
+- Time: O(n+m) where n=codeReqs, m=yamlReqs
+- Space: O(n+m) for processed results storage
+
+**Example:**
+```go
+err := enhanceWithAI(codeReqs, yamlReqs, config)
+```
+
+**Edge Cases:**
+- Empty request slices
+- AI service unavailability
+- Rate limiting from AI provider
+- Large request batches timing out
+
+
+</details>
+
+<details>
+<summary><b><code>generateFinalDocs(result *analyzer.AnalyzerResult, cfg docTypes.GeneratorConfig)</code></b></summary>
+
+**Summary:** Generates final documentation from analysis results
+
+**Parameters:**
+- `result` (*analyzer.AnalyzerResult): Analysis results to document
+- `cfg` (docTypes.GeneratorConfig): Configuration for documentation generation
+
+**Returns:** Error if documentation generation fails
+
+**Complexity:**
+- Time: O(n) where n is size of analysis results
+- Space: O(n) for generated documentation
+
+**Example:**
+```go
+err := generateFinalDocs(analysisResults, config)
+```
+
+**Edge Cases:**
+- Nil analyzer result
+- Invalid output directory in config
+- Missing required fields in config
+
+
+</details>
+
+
+---
+
+## 📄 File: `ai_requests.go`
+
+> 📍 `generator\ai_requests.go`
+
+## 📑 Contents
+
+- [🔧 Functions (3)](#-functions)
+
+## 🔧 Functions
+
+<details>
+<summary><b><code>processAIRequests(codeRequests []cfg.AICodeRequest, yamlRequests []cfg.AIYAMLRequest, client *ai.Client)</code></b></summary>
+
+**Summary:** Configuration struct for code generation
+
+**Parameters:**
+- `AIClient` (*ai.Client): AI service client instance
+- `OutputDir` (string): Target directory for generated files
+- `Project` (Project): Project metadata (type details inferred)
+
+**Returns:** N/A (configuration struct)
+
+**Complexity:**
+- Time: N/A
+- Space: O(1) for struct allocation
+
+**Example:**
+```go
+config := GeneratorConfig{AIClient: client, OutputDir: "out"}
+```
+
+**Edge Cases:**
+- Nil AIClient causing runtime errors
+- Invalid OutputDir path
+- Incomplete Project struct fields
+
+
+</details>
+
+<details>
+<summary><b><code>formatYAMLStruct(s analyzer.Struct)</code></b></summary>
+
+**Summary:** Formats a YAML structure into a string
+
+**Parameters:**
+- `s` (analyzer.Struct): YAML structure to format
+
+**Returns:** Formatted YAML string
+
+**Complexity:**
+- Time: O(n) where n is structure size
+- Space: O(n) for output string
+
+**Example:**
+```go
+yamlStr := formatYAMLStruct(myStruct)
+```
+
+**Edge Cases:**
+- Empty input structure
+- Invalid YAML formatting rules
+- Nested structure depth limits
+
+
+</details>
+
+<details>
+<summary><b><code>formatYAMLFields(fields []analyzer.Field, depth int)</code></b></summary>
+
+**Summary:** Formats YAML fields with indentation based on depth
+
+**Parameters:**
+- `fields` ([]analyzer.Field): List of fields to format
+- `depth` (int): Indentation level
+
+**Returns:** Formatted YAML string representation of fields
+
+**Complexity:**
+- Time: O(n) where n is number of fields
+- Space: O(n) for output string storage
+
+**Example:**
+```go
+yaml := formatYAMLFields([]Field{{Name: "test"}}, 2)
+```
+
+**Edge Cases:**
+- Empty fields array
+- Negative depth values
+- Nested field structures
+
+
+</details>
+
+
+---
+
+## 📄 File: `generator.go`
+
+> 📍 `generator\generator.go`
+
+## 📑 Contents
+
+- [🔧 Functions (5)](#-functions)
+
+## 🔧 Functions
+
+<details>
+<summary><b><code>GeneratePackageDocs(result *analyzer.AnalyzerResult, cfg docTypes.GeneratorConfig)</code></b></summary>
+
+**Summary:** Returns field value or a placeholder if empty
+
+**Parameters:**
+- `f` (analyzer.Field): Field to check for value
+
+**Returns:** Field value as string or placeholder if empty
+
+**Complexity:**
+- Time: O(1)
+- Space: O(1)
+
+**Example:**
+```go
+val := getValueOrPlaceholder(field) // returns "N/A" if empty
+```
+
+**Edge Cases:**
+- Nil field input
+- Field with whitespace-only value
+
+
+</details>
+
+<details>
+<summary><b><code>prepareOutputStructure(result *analyzer.AnalyzerResult, cfg docTypes.GeneratorConfig)</code></b></summary>
+
+**Summary:** Prepares output structure from analyzer result using generator config
+
+**Parameters:**
+- `result` (*analyzer.AnalyzerResult): Analysis result to process
+- `cfg` (docTypes.GeneratorConfig): Configuration for output generation
+
+**Returns:** Error if preparation fails, nil otherwise
+
+**Complexity:**
+- Time: O(n) where n is size of result data
+- Space: O(n) for output structure allocation
+
+**Example:**
+```go
+err := prepareOutputStructure(&analysisResult, config)
+```
+
+**Edge Cases:**
+- Nil result pointer
+- Invalid config options
+- Large result data causing memory issues
+
+
+</details>
+
+<details>
+<summary><b><code>prepareAIRequests(result *analyzer.AnalyzerResult, cfg docTypes.GeneratorConfig)</code></b></summary>
+
+**Summary:** Creates AI request objects from analyzer result
+
+**Parameters:**
+- `result` (*analyzer.AnalyzerResult): Analysis result to convert
+- `cfg` (docTypes.GeneratorConfig): Configuration for request generation
+
+**Returns:** Two slices: AI code requests and AI YAML requests
+
+**Complexity:**
+- Time: O(n) where n is number of elements in result
+- Space: O(n) for request slices allocation
+
+**Example:**
+```go
+codeReqs, yamlReqs := prepareAIRequests(&analysisResult, config)
+```
+
+**Edge Cases:**
+- Empty result data
+- Configuration limiting request types
+- Memory constraints with large result sets
+
+
+</details>
+
+<details>
+<summary><b><code>enhanceWithAI(codeRequests []docTypes.AICodeRequest, yamlRequests []docTypes.AIYAMLRequest, cfg docTypes.GeneratorConfig)</code></b></summary>
+
+**Summary:** Enhances documentation using AI-generated content
+
+**Parameters:**
+- `codeRequests` ([]docTypes.AICodeRequest): Code documentation requests
+- `yamlRequests` ([]docTypes.AIYAMLRequest): YAML documentation requests
+- `cfg` (docTypes.GeneratorConfig): Configuration for enhancement process
+
+**Returns:** Error if enhancement fails, nil otherwise
+
+**Complexity:**
+- Time: O(n+m) where n=codeReqs, m=yamlReqs
+- Space: O(n+m) for processed results storage
+
+**Example:**
+```go
+err := enhanceWithAI(codeReqs, yamlReqs, config)
+```
+
+**Edge Cases:**
+- Empty request slices
+- AI service unavailability
+- Rate limiting from AI provider
+- Large request batches timing out
+
+
+</details>
+
+<details>
+<summary><b><code>generateFinalDocs(result *analyzer.AnalyzerResult, cfg docTypes.GeneratorConfig)</code></b></summary>
+
+**Summary:** Generates final documentation from analysis results
+
+**Parameters:**
+- `result` (*analyzer.AnalyzerResult): Analysis results to document
+- `cfg` (docTypes.GeneratorConfig): Configuration for documentation generation
+
+**Returns:** Error if documentation generation fails
+
+**Complexity:**
+- Time: O(n) where n is size of analysis results
+- Space: O(n) for generated documentation
+
+**Example:**
+```go
+err := generateFinalDocs(analysisResults, config)
+```
+
+**Edge Cases:**
+- Nil analyzer result
+- Invalid output directory in config
+- Missing required fields in config
+
+
+</details>
+

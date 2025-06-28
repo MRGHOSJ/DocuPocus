@@ -10,7 +10,7 @@
 |---------|-------------|
 | ☸️ Kubernetes Configs | Kubernetes manifests included |
 
-**🛠 Tech Stack:** `Go`, `YAML`, `GitHub Actions`
+**🛠 Tech Stack:** `YAML`, `Go`, `GitHub Actions`
 
 ## 📦 Packages
 
