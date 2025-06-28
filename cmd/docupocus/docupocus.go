@@ -28,7 +28,7 @@ func run() error {
 	nonInteractive := flag.Bool("non-interactive", false, "Run in CI mode")
 	projectDirFlag := flag.String("project-dir", ".", "Project directory to analyze")
 	aiBackendFlag := flag.String("ai-backend", "openrouter", "AI backend (ollama or openrouter)")
-	aiModelFlag := flag.String("ai-Model", "deepseek/deepseek-chat-v3-0324:free", "AI Model to use")
+	aiModelFlag := flag.String("ai-model", "deepseek/deepseek-chat-v3-0324:free", "AI Model to use")
 	aiEndpointFlag := flag.String("ai-endpoint", "", "Custom AI endpoint URL")
 	aiAPIKeyFlag := flag.String("ai-api-key", "", "API key for OpenRouter")
 	outputFolderFlag := flag.String("output", "docs", "Output file path")
