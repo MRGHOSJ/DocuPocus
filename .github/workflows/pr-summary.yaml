@@ -5,7 +5,8 @@ on:
     types: [opened, synchronize, reopened]
 
 permissions:
-  contents: write   # Needed to post PR comments
+  contents: write
+  pull-requests: write
 
 jobs:
   pr-summary:
@@ -14,8 +15,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -28,27 +27,31 @@ jobs:
       - name: Generate PR Summary
         id: generate_summary
         run: |
-          raw_summary=$(./docupocus --non-interactive --summary --base-branch main \
-                --ai-api-key "${{ secrets.OPENROUTER_API_KEY }}" \
-                --ai-backend openrouter \
-                --verbose)
-                
-          # Extract only the actual summary, removing logs and prefixes
+          raw_summary=$(./docupocus \
+            --non-interactive \
+            --summary \
+            --base-branch main \
+            --ai-api-key "${{ secrets.OPENROUTER_API_KEY }}" \
+            --ai-backend openrouter)
+
+          # Extract only the AI summary portion
           filtered_summary=$(echo "$raw_summary" | sed -n '/Raw summary API response:/,$p' | sed '1d')
           filtered_summary=$(echo "$filtered_summary" | sed '/^\s*$/d')
 
+          # Escape multiline summary properly
           echo "summary<<EOF" >> $GITHUB_OUTPUT
           echo "$filtered_summary" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-      - name: Post PR Summary Comment
+      - name: 💬 Post PR Summary as comment
         uses: actions/github-script@v6
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const summary = `### 🤖 Automated PR Summary\n\n${{ steps.generate_summary.outputs.summary }}`
-            github.rest.issues.createComment({
-              ...context.repo,
+            const summary = `### 🤖 Automated PR Summary\n\n${{ steps.generate_summary.outputs.summary }}`;
+            await github.rest.issues.createComment({
               issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
               body: summary
-            })
+            });
