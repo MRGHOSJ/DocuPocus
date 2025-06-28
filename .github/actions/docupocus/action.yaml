@@ -54,17 +54,29 @@ runs:
     - name: 🚀 Push docs to preview branch
       shell: bash
       run: |
+        set -e
+
         git config --global user.email "actions@github.com"
         git config --global user.name "GitHub Actions"
 
         PREVIEW_BRANCH="docupocus-preview"
 
+        # Save generated docs before switching branches
+        mkdir temp-docs
+        cp -r docs/* temp-docs/
+
+        # Create new orphan branch
+        git fetch origin
         git checkout --orphan $PREVIEW_BRANCH
         git reset --hard
-        rm -rf .github .gitignore * || true
+        rm -rf * .github .gitignore || true
 
+        # Restore docs into new branch
         mkdir -p docs
-        cp -r ../docs/* ./docs/
+        cp -r temp-docs/* docs/
+        rm -rf temp-docs
+
+        touch .nojekyll  # Allow GitHub Pages to serve files from /docs
 
         git add docs/
         git commit -m "📝 Docupocus preview"
