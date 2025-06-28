@@ -1,8 +1,8 @@
 name: Generate Docs
 
 on:
-  pull_request:
-    types: [opened, synchronize]
+  # pull_request:
+  #   types: [opened, synchronize]
   workflow_dispatch:
 
 permissions:
